@@ -49,6 +49,9 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.permissions",
     "apps.audit",
+    "apps.guardians",
+    "apps.admissions",
+    "apps.students",
 ]
 
 MIDDLEWARE = [

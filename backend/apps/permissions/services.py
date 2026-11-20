@@ -97,12 +97,21 @@ def user_can_access_institution(user, institution_id) -> bool:
     return user_has_active_role_for_institution(user, institution_id)
 
 
+def user_can_access_campus_id(user, campus_id) -> bool:
+    """Server-side campus scope check for a campus identifier."""
+    if _is_privileged(user):
+        return True
+    if not user_can_access_institution(user, user.institution_id):
+        return False
+    if campus_id is None or user.campus_id is None:
+        return True
+    return user.campus_id == campus_id
+
+
 def user_can_access_campus(user, campus: Campus) -> bool:
     """Server-side campus scope check within an accessible institution."""
     if _is_privileged(user):
         return True
     if not user_can_access_institution(user, campus.institution_id):
         return False
-    if user.campus_id is None:
-        return True
-    return user.campus_id == campus.id
+    return user_can_access_campus_id(user, campus.id)

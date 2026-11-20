@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2 approved to proceed with RBAC baseline approved per D-026). Sequenced by dependencies and Master Spec Phases 0–7.  
+**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2 M2 implemented locally and pending remote CI; RBAC baseline approved per D-026). Sequenced by dependencies and Master Spec Phases 0–7.
 **Last updated:** 2026-11-20
 
 ## 1. Guiding Approach
@@ -21,13 +21,13 @@
 - **Scope:** repo/project structure, backend/frontend scaffolds, env/config, Docker dev setup, institution/campus context, authn (per D-011), RBAC framework, audit framework, base UI system, CI pipeline, initial tests, OpenAPI scaffolding.
 - **Milestone M1:** authenticated user can log in (securely) to correct institution/campus context with enforced RBAC and audit of auth/security events; CI green.
 - **Dependencies:** D-010 (versions/lockfiles), D-011 (auth choice), D-014 (storage approach), core ERD for identity/tenancy.
-- **Status (2026-11-20):** **M1 accepted to proceed.** Implemented: Django/DRF scaffold, env-driven config, custom `accounts.User`, institutions/campus, permissions & audit app scaffolds/services, session+CSRF auth endpoints + basic frontend auth shell, initial migrations, CI workflow, backend/frontend dependency snapshots. Institution/campus-scoped read APIs enforce deny-by-default RBAC with object-level institution/campus checks and audited denials; audit service now redacts secrets, derives scope and logs write failures. RBAC role/permission matrix approved as MVP baseline (D-026). Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**15 passed**) against PostgreSQL 18; frontend build passed; remote CI green (`44761962350`); Postgres 18 + Redis 8 containers healthy. **Remaining hardening (non-blocking):** per-module RBAC grants/enforcement, containerized backend/Celery runtime (Docker Desktop image export stalls), Celery/Redis integration evidence, EOL/lockfile-tooling follow-ups.
+- **Status (2026-11-20):** **M1 accepted to proceed.** Implemented: Django/DRF scaffold, env-driven config, custom `accounts.User`, institutions/campus, permissions & audit app scaffolds/services, session+CSRF auth endpoints + basic frontend auth shell, initial migrations, CI workflow, backend/frontend dependency snapshots. Institution/campus-scoped read APIs enforce deny-by-default RBAC with object-level institution/campus checks and audited denials; audit service now redacts secrets, derives scope and logs write failures. RBAC role/permission matrix approved as MVP baseline (D-026). Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**15 passed**) against PostgreSQL 18; frontend build passed; remote CI green (`44763428401`); Postgres 18 + Redis 8 containers healthy. **Remaining hardening (non-blocking):** per-module RBAC grants/enforcement, containerized backend/Celery runtime (Docker Desktop image export stalls), Celery/Redis integration evidence, EOL/lockfile-tooling follow-ups.
 
 ### Phase 2 — Student & Admissions (depends on M1)
 - **Scope:** enquiries, applications, admissions workflow, student profiles, guardian relationships, lifecycle transitions, document management, controlled imports groundwork.
 - **Milestone M2:** enquiry→application→approval→enrolment works end-to-end with unique admission number, no duplicate identity, linked guardians, audited transitions.
 - **Dependencies:** identity/ID generation, file storage (private), RBAC scopes.
-- **Status (2026-11-20):** **Approved to proceed (D-026).** Use the approved RBAC matrix as the authorization baseline; add module-specific per-verb grants and negative authorization tests with each slice.
+- **Status (2026-11-20):** **M2 vertical slice implemented locally; pending remote CI.** Implemented identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle events, service-enforced workflows, duplicate-identity prevention, institution/campus-scoped APIs with module role grants, and audited transitions/denials. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**22 passed**) against PostgreSQL 18. Remaining Phase 2 hardening: private document storage, controlled-import groundwork, per-verb grant refinement and negative tests beyond the current slice.
 
 ### Phase 3 — Academic & Teaching (depends on M2)
 - **Scope:** academic sessions/terms, classes/arms, subjects/offerings, employee/teacher records (base), subject-teacher allocations (effective-dated/history), timetables, attendance (student/teacher).

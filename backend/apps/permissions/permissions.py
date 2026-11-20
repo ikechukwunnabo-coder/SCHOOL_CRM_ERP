@@ -3,10 +3,12 @@ from __future__ import annotations
 from rest_framework.permissions import BasePermission
 
 from apps.audit.services import log_event
-from apps.institutions.models import Institution
+from apps.institutions.models import Campus, Institution
 
 from .services import (
+    get_user_role_names,
     user_can_access_campus,
+    user_can_access_campus_id,
     user_can_access_institution,
     user_has_active_role_for_institution,
 )
@@ -80,6 +82,32 @@ class HasActiveInstitutionRole(BasePermission):
         return True
 
 
+class HasRole(BasePermission):
+    """Require one of the role names allowed by the view (D-026 module grants)."""
+
+    message = "Your role is not permitted to perform this action."
+    allowed_roles: tuple[str, ...] = ()
+
+    def has_permission(self, request, view):
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated or not user.is_active:
+            return False
+        if user.is_superuser:
+            return True
+        allowed = frozenset(getattr(view, "allowed_roles", self.allowed_roles))
+        if not allowed:
+            return True
+        held = set(get_user_role_names(user))
+        if held & allowed:
+            return True
+        return _deny(
+            request,
+            reason="missing_required_role",
+            target_type="permissions.Role",
+            metadata={"required_roles": sorted(allowed)},
+        )
+
+
 class IsInstitutionScoped(BasePermission):
     """Object-level guard: the target must belong to the caller's institution."""
 
@@ -117,7 +145,11 @@ class IsCampusScoped(BasePermission):
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated or not user.is_active:
             return False
-        if user_can_access_campus(user, obj):
+        if isinstance(obj, Campus):
+            allowed = user_can_access_campus(user, obj)
+        else:
+            allowed = user_can_access_campus_id(user, getattr(obj, "campus_id", None))
+        if allowed:
             return True
         return _deny(
             request,
