@@ -1,0 +1,15 @@
+.page { min-height: 100vh; padding: 2rem; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: #f5f7fb; color: #1f2937; }
+.auth-page { display: grid; place-items: center; }
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.auth-card { width: 100%; max-width: 420px; }
+.form { display: grid; gap: .75rem; margin-top: 1rem; }
+label { display: grid; gap: .25rem; font-size: .9rem; }
+input { padding: .6rem .7rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }
+button { padding: .6rem .9rem; border: 0; border-radius: 8px; background: #0f766e; color: #fff; cursor: pointer; font-weight: 600; }
+button:disabled { opacity: .6; cursor: default; }
+.error { color: #b91c1c; font-size: .9rem; }
+.muted { color: #6b7280; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; }
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+pre { white-space: pre-wrap; word-break: break-word; font-size: .85rem; }
+h1,h2,h3 { margin: 0 0 .25rem 0; }

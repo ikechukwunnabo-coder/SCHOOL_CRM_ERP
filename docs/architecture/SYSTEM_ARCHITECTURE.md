@@ -1,0 +1,108 @@
+# System Architecture
+
+**Project:** School CRM & ERP Platform  
+**Status:** Draft (documented, not implemented/tested)  
+**Baseline:** Modular monolith, API-first, one institution with multi-campus (future multi-institution ready), integrated CMS.
+
+## 1. Architectural Style & Principles
+- **Modular monolith:** single deployable backend with clear domain modules/apps, communicating via documented service interfaces/domain events/APIs internally; avoid premature microservices.
+- **API-first:** React (TypeScript) frontend consumes backend APIs; no frontend-only business logic for authorization or critical rules.
+- **Configurable over hardcoded:** academic, finance, identity, calendar, grading, branding rules configurable/effective-dated where specified.
+- **Security & integrity:** deny-by-default RBAC, server-side scope enforcement (institution/campus/record), auditable sensitive actions, immutable/history-preserving records for academic/financial/official documents.
+- **Separation of concerns:** public CMS content strictly separated from private ERP data.
+
+## 2. High-Level Component Diagram (logical)
+
+```
+[Public Website (CMS pages, public admissions info)]
+        |  HTTPS (public, published content only)
+        v
+[React + TypeScript SPA/PWA Shell]
+  - Public site  - Parent/Teacher/Student/Alumni portals  - Admin console
+        |  HTTPS (API, cookie/CSRF or approved auth)
+        v
+[Nginx / Reverse Proxy]  --> static assets, TLS termination, routing
+        |
+        v
+[Django + DRF Application (Gunicorn)]
+  - Auth/RBAC/Permissions  - Domain modules (apps)  - Services/Workflows
+  - Background job producers  - Audit logging  - File/document handling
+        |           |              |
+        v           v              v
+ [PostgreSQL]   [Redis]     [Object Storage]
+ (primary DB)  (cache,      (private docs + public CMS
+               broker)       media, signed URLs)
+                   |
+                   v
+             [Celery Workers/Beat]
+             (async jobs, reports, notifications, schedules)
+
+[External Integrations via adapters]
+ - Payment gateway (webhooks, server-side verify)
+ - Email / SMS (WhatsApp R3)
+ - (Future) Biometric, GPS, identity services
+```
+
+## 3. Backend Application Boundaries (proposed, to be finalized in review)
+
+| App/Module | Ownership (single source of truth) | Key responsibilities |
+|---|---|---|
+| `core` | Shared primitives | base models, utilities, settings helpers, common validators, ID generation services |
+| `institutions` | Institution & campus | schools/institutions, campuses, tenant context, institution settings/branding config |
+| `accounts` | User accounts/auth | user model/profile linkage, auth flows, password reset, sessions/tokens |
+| `permissions` | RBAC | roles, permissions, scopes, policy evaluation helpers |
+| `students` | Student identity & lifecycle | student record, admission number, enrolment, lifecycle/state transitions, stable identity |
+| `admissions` | Recruitment/admission | enquiries, applications, decisions, onboarding, conversion to student (no duplicate identity) |
+| `guardians` | Parent/guardian | guardian profiles, student-guardian relationships, contact/consent/portal access flags |
+| `employees` | Staff identity/HR base | staff records, employee numbers, departments/job titles, employment status (payroll R2) |
+| `academics` | Academic structure | sessions/years, terms, classes/grades, arms, subjects, curriculum/offerings, calendar |
+| `teaching` | Teaching assignments | subject-teacher-class allocations, roles (lead/assistant/substitute), effective dates, workload/history |
+| `attendance` | Attendance | student/staff attendance sessions/marks, corrections, summaries (lesson/daily) |
+| `examinations` | Assessment & results | assessment config/components, marks entry/validation, calculations, submission/review/approval/publish workflow, result versions |
+| `transcripts` | Official transcripts | generation from approved historical results, issuance, versioning, corrections, verification refs |
+| `finance` | Fees & payments (MVP) | fee categories/schedules, invoices, payments/allocations, receipts, balances, refunds/reversals; integration point for R2 GL |
+| `inventory` | Stores/stock | item catalogue, stores/locations, stock movements/ledger, counts/reconciliation, alerts |
+| `procurement` | Purchasing | suppliers, requisitions, approvals, POs, GRNs, invoice matching, procurement controls |
+| `asset_management` | Durable assets | asset register, tagging, custody/assignment, movement, maintenance, verification, disposal, (depreciation config R2/integration) |
+| `communications` | Messaging/notifications | in-app/email/SMS templates, targeting, delivery status/retries, preferences/consent |
+| `portals` | Role portal aggregation | portal-specific views/endpoints composing domain data (thin; domain logic remains in owning apps) |
+| `cms` | Public website/CMS | pages, menus, media, news/events/gallery, drafts/review/publish/schedule, revisions, SEO/redirects (public-only data) |
+| `alumni` | Alumni | linked alumni profiles, engagement records (full portal R2) |
+| `reporting` | Reports/dashboards/exports | role-scoped dashboards, report generation, async exports, access logging |
+| `audit` | Audit trail | immutable/tamper-evident records of sensitive actions, actor/target/timestamp/change summary |
+| `integrations` | External adapters | payment/email/SMS/(future WhatsApp/biometric/GPS) adapters, webhooks, idempotency/reconciliation hooks |
+
+**Rules:** no duplicate business entities across apps; explicit dependency direction; no circular imports; cross-module operations via services/interfaces or domain events; all DB mutations for critical workflows wrapped in transactions.
+
+## 4. Frontend Architecture (proposed)
+- **React + TypeScript (strict)**, Vite build, Tailwind CSS + shadcn/ui (or consistent accessible components).
+- **State:** TanStack Query for server state; local/UI state minimized; React Hook Form + Zod for forms/validation (client-side supplemental).
+- **Structure (feature-oriented):** `app/` (bootstrap/routing/providers), `features/` (domain modules: admissions, students, academics, teaching, attendance, examinations, transcripts, finance, inventory, assets, procurement, portals, cms, reports, settings), `components/` (ui/layout/forms/tables/charts), `services/` (API client), `hooks/`, `contexts/`, `routes/` (protected/role-guarded), `types/`, `utils/`.
+- **Concerns:** centralized API client with auth/CSRF handling, error normalization, pagination/filter helpers; role- and scope-aware navigation/rendering (authoritative enforcement remains backend); accessible, responsive layouts.
+
+## 5. Data & Storage
+- **PostgreSQL** primary relational DB: FKs, unique/check constraints, indexes, transactions, effective-dated/historical records, timestamps and actor refs where appropriate.
+- **Redis:** caching (authz-safe, freshness-aware) and Celery broker/result backend as configured.
+- **Object storage:** S3-compatible for private documents (confidential) and public CMS media (separated buckets/prefixes/policies); signed/expiring URLs or authenticated download endpoints for private files.
+- **Identifiers:** stable internal PKs (UUIDs where appropriate) + configurable human-readable immutable official IDs per Master Spec §26.
+
+## 6. Integration & Async Processing
+- **Adapters:** provider-agnostic interfaces for payments, email, SMS, storage; credentials via env/secrets manager; webhook signature validation, idempotency, retries with backoff, failure inspection/replay, payment reconciliation.
+- **Celery:** bulk reports/exports, notifications, scheduled tasks (reminders, expiry checks), async heavy processing; idempotent tasks where possible.
+
+## 7. Security Architecture (high-level)
+- HttpOnly/Secure/SameSite cookies (recommended) with CSRF for state changes; throttling/rate limits; strong password hashing; TLS in transit; encryption at rest via infra/storage controls.
+- Authorization enforced in querysets/services/views and background jobs; object/record-level checks to prevent IDOR.
+- Audit logging for sensitive operations; private-by-default documents; strict validation/sanitization of inputs and uploads.
+
+## 8. Deployment Topology (target)
+- **Environments:** dev, staging, production with separate configs/secrets.
+- **Containers:** Docker Compose for local dev; production via orchestrated containers/VMs as approved (Nginx reverse proxy → Gunicorn/Django, Celery workers/beat, PostgreSQL, Redis, object storage).
+- **Observability:** structured logs with correlation IDs, error monitoring/alerting, health checks.
+
+## 9. Key Cross-Cutting Decisions (pending)
+- Final auth mechanism choice and token/session lifecycle (D-011).
+- Final pinned version matrix and package managers (D-010).
+- Provider selections and infra sizing (D-012–D-015, D-019).
+
+*This document is a blueprint for review; no components above are implemented.*
