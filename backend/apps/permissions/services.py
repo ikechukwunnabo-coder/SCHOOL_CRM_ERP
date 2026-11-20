@@ -4,6 +4,8 @@ from django.db.models import Q
 
 from apps.institutions.models import Campus
 
+from .models import Permission
+
 
 def _is_privileged(user) -> bool:
     return bool(user and getattr(user, "is_authenticated", False) and user.is_superuser)
@@ -59,6 +61,32 @@ def get_user_role_names(user) -> list[str]:
         .values_list("role__name", flat=True)
         .distinct()
     )
+
+
+def user_has_module_permission(user, module: str, verb: str, *, resource: str = "*") -> bool:
+    """Check configurable per-verb grants after baseline institution checks."""
+    if _is_privileged(user):
+        return True
+    institution_id = getattr(user, "institution_id", None)
+    if not user_has_active_role_for_institution(user, institution_id):
+        return False
+    held = set(get_user_role_names(user))
+    if not held:
+        return False
+    permissions = (
+        Permission.objects.filter(module=module, verb=verb)
+        .filter(Q(resource=resource) | Q(resource="*"))
+        .prefetch_related("role_grants__role")
+    )
+    for permission in permissions:
+        if set(permission.allowed_role_names) & held:
+            return True
+        if any(
+            grant.allowed and grant.role.name in held
+            for grant in permission.role_grants.all()
+        ):
+            return True
+    return False
 
 
 def get_user_role_assignments(user) -> list[dict]:

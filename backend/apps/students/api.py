@@ -9,7 +9,7 @@ from apps.guardians.models import Guardian
 from apps.permissions.permissions import (
     HasActiveInstitutionRole,
     HasInstitutionContext,
-    HasRole,
+    HasModuleVerbPermission,
     IsAuthenticatedAndActive,
     IsCampusScoped,
     IsInstitutionScoped,
@@ -24,7 +24,7 @@ BASE_PERMISSIONS = [
     IsAuthenticatedAndActive,
     HasInstitutionContext,
     HasActiveInstitutionRole,
-    HasRole,
+    HasModuleVerbPermission,
     IsInstitutionScoped,
     IsCampusScoped,
 ]
@@ -123,6 +123,15 @@ class GuardianLinkSerializer(serializers.Serializer):
 
 class ScopedStudentViewSet(viewsets.GenericViewSet):
     permission_classes = BASE_PERMISSIONS
+    module = "students"
+    verb = "view"
+    resource = "*"
+    verb_map = {
+        "create": "create",
+        "update": "update",
+        "partial_update": "update",
+        "destroy": "delete_or_archive",
+    }
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -146,11 +155,11 @@ class StudentViewSet(ScopedStudentViewSet, viewsets.ReadOnlyModelViewSet):
     serializer_class = StudentSerializer
     queryset = Student.objects.all()
     allowed_roles = STUDENT_VIEW_ROLES
-
-    def get_permissions(self):
-        if self.action in {"lifecycle", "guardians"} and self.request.method != "GET":
-            self.allowed_roles = STUDENT_MANAGE_ROLES
-        return super().get_permissions()
+    verb_map = {
+        "lifecycle": "update",
+        "guardians": "update",
+        "documents": "view",
+    }
 
     @action(detail=True, methods=["post"])
     def lifecycle(self, request, pk=None):

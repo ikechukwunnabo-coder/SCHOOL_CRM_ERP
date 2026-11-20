@@ -254,5 +254,5 @@ def test_api_full_flow_scoping_and_role_denials():
     )
     assert denied.status_code == 403
     assert AuditLog.objects.filter(
-        action="authz.denied", reason="missing_required_role"
+        action="authz.denied", reason="missing_module_permission"
     ).exists()

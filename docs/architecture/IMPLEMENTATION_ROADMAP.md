@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2 M2 implemented locally and pending remote CI; RBAC baseline approved per D-026). Sequenced by dependencies and Master Spec Phases 0–7.
+**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; Phase 3 approved to proceed). Sequenced by dependencies and Master Spec Phases 0–7.
 **Last updated:** 2026-11-20
 
 ## 1. Guiding Approach
@@ -27,12 +27,13 @@
 - **Scope:** enquiries, applications, admissions workflow, student profiles, guardian relationships, lifecycle transitions, document management, controlled imports groundwork.
 - **Milestone M2:** enquiry→application→approval→enrolment works end-to-end with unique admission number, no duplicate identity, linked guardians, audited transitions.
 - **Dependencies:** identity/ID generation, file storage (private), RBAC scopes.
-- **Status (2026-11-20):** **M2 vertical slice implemented locally; pending remote CI.** Implemented identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle events, service-enforced workflows, duplicate-identity prevention, institution/campus-scoped APIs with module role grants, and audited transitions/denials. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**22 passed**) against PostgreSQL 18. Remaining Phase 2 hardening: private document storage, controlled-import groundwork, per-verb grant refinement and negative tests beyond the current slice.
+- **Status (2026-11-20):** **M2 accepted and closed (D-027).** Implemented identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle events, service-enforced workflows, duplicate-identity prevention, institution/campus-scoped APIs with module role grants, private document storage/import-validation groundwork, and audited transitions/denials. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**25 passed**) against PostgreSQL 18; remote CI green (`44769870049`) for the M2 slice, with closure commit pending push. Provider-dependent production integrations and containerized backend/Celery runtime validation are tracked hardening items, not M2 blockers.
 
 ### Phase 3 — Academic & Teaching (depends on M2)
 - **Scope:** academic sessions/terms, classes/arms, subjects/offerings, employee/teacher records (base), subject-teacher allocations (effective-dated/history), timetables, attendance (student/teacher).
 - **Milestone M3:** configured structure with valid teacher allocations and timetable conflict checks; attendance marking/corrections audited; teacher scoped to assigned classes/subjects.
 - **Dependencies:** academics/teaching schema, conflict validation services.
+- **Status (2026-11-20):** **Approved to proceed (D-027).** Begin with academic structure (sessions/terms, classes/arms) and subject/teacher foundations, then allocations, timetable conflict checks, and audited attendance.
 
 ### Phase 4 — Examinations & Transcripts (depends on M3)
 - **Scope:** assessment schemes/components, grading scales (effective-dated), result entry/validation, submission→review→approval→publish workflow, corrections/versioning, report cards (PDF), cumulative transcripts (generation/issuance/verification/versioning), graduation→alumni linkage, basic ID cards (if sequenced per MVP).

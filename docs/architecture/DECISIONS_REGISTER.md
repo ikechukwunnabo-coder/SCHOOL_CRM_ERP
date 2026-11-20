@@ -574,6 +574,15 @@ No shared production administrator account should be used.
 **Owner:** Product / Security / School Management  
 **Approval:** Approved on 2026-11-20; permission granted to proceed to Phase 2 (Student & Admissions). Approval is for the documented baseline, not a claim that every matrix entry is already implemented/tested; incremental enforcement remains under Phase 2+ code review and tests.
 
+## D-027 — Phase 2 M2 acceptance and Phase 3 authorization
+
+**Decision:** Accept the Phase 2 Student & Admissions vertical slice as meeting milestone M2 once remote CI is green, and authorize Phase 3 Academic & Teaching implementation. Closure includes the Phase 2 residual items: private document storage groundwork, controlled-import validation groundwork, module-level per-verb RBAC enforcement and negative authorization tests.
+
+**Evidence:** Commit `e379bef`, remote CI run `44769870049` (frontend and backend green), local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (25 tests) against PostgreSQL 18.
+
+**Owner:** Product / School Management  
+**Approval:** Approved on 2026-11-20; permission granted to close Phase 2 and proceed to Phase 3 (Academic & Teaching). Provider-dependent production integrations and containerized backend/Celery runtime validation remain tracked hardening items and do not block M3.
+
 ---
 
 # 4. Open Questions Requiring Institutional Input
@@ -686,7 +695,7 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-026 | Approved for implementation as recorded (D-010 validated in Phase 1/M1; D-026 approves the RBAC baseline and Phase 2 progression; D-012/D-013/D-016–D-019 include interim approaches pending external inputs) |
+| D-001–D-027 | Approved for implementation as recorded (D-010 validated in Phase 1/M1; D-026 approves the RBAC baseline; D-027 accepts Phase 2/M2 and authorizes Phase 3; D-012/D-013/D-016–D-019 include interim approaches pending external inputs) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
@@ -694,17 +703,17 @@ Changing an approved decision requires a documented change request and impact as
 | Infrastructure selection | Pending (Q-005) — targets/approach approved |
 | Architecture validation | Blueprint reviewed/documented; to be enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register (subject to ongoing governance) |
-| Implementation | Phase 1 foundation partially implemented; domain modules pending |
-| Testing | Backend/frontend validated locally and in remote CI (15 backend tests); containerized backend runtime pending |
+| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3 authorized |
+| Testing | Backend/frontend validated locally and in remote CI (25 backend tests, run pending for closure commit); containerized backend runtime pending |
 
 ---
 
 # 9. Phase 0 Readiness Recommendation
 
-**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2 approved to proceed (D-026)**
+**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; Phase 3 approved to proceed (D-027)**
 
 The project may proceed now with:
-- Phase 2 Student & Admissions implementation per `IMPLEMENTATION_ROADMAP.md`, using the approved RBAC baseline (D-026).
+- Phase 3 Academic & Teaching implementation per `IMPLEMENTATION_ROADMAP.md`, using the approved RBAC baseline (D-026) and Phase 2 closure (D-027).
 - Completion of remaining Phase 1 hardening (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
 - Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.

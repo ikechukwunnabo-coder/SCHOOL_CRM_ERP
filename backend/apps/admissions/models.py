@@ -3,6 +3,7 @@ from django.db import models
 from django.utils import timezone
 
 from apps.core.models import TimeStampedModel
+from apps.core.storage import private_document_storage
 
 
 class PersonDetails(models.Model):
@@ -186,6 +187,12 @@ class ApplicationDocument(TimeStampedModel):
     checklist_item = models.CharField(max_length=150)
     original_name = models.CharField(max_length=255)
     file_ref = models.CharField(max_length=500)
+    file = models.FileField(
+        storage=private_document_storage,
+        upload_to="applications/%Y/%m/",
+        max_length=500,
+        blank=True,
+    )
     content_type = models.CharField(max_length=150, blank=True)
     size_bytes = models.PositiveBigIntegerField(default=0)
     review_status = models.CharField(

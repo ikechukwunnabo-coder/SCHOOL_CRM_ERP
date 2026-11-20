@@ -1,19 +1,22 @@
+from django.http import FileResponse
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from apps.admissions.permissions import (
-    ADMISSION_DECIDE_ROLES,
     ADMISSION_MANAGE_ROLES,
     ADMISSION_VIEW_ROLES,
 )
+from apps.audit.services import log_event
 from apps.core.exceptions import ConflictError
+from apps.core.storage import prepare_document_upload, private_document_storage, scan_document
 from apps.guardians.models import Guardian
 from apps.permissions.permissions import (
     HasActiveInstitutionRole,
     HasInstitutionContext,
-    HasRole,
+    HasModuleVerbPermission,
     IsAuthenticatedAndActive,
     IsCampusScoped,
     IsInstitutionScoped,
@@ -28,7 +31,7 @@ BASE_PERMISSIONS = [
     IsAuthenticatedAndActive,
     HasInstitutionContext,
     HasActiveInstitutionRole,
-    HasRole,
+    HasModuleVerbPermission,
     IsInstitutionScoped,
     IsCampusScoped,
 ]
@@ -62,6 +65,15 @@ def _resolve_campus(serializer, attrs, institution):
 class ScopedAdmissionViewSet(viewsets.ModelViewSet):
     permission_classes = BASE_PERMISSIONS
     allowed_roles = ADMISSION_MANAGE_ROLES
+    module = "admissions"
+    verb = "view"
+    resource = "*"
+    verb_map = {
+        "create": "create",
+        "update": "update",
+        "partial_update": "update",
+        "destroy": "delete_or_archive",
+    }
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -189,19 +201,71 @@ class EnrolSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True, default="")
 
 
+class DocumentUploadSerializer(serializers.Serializer):
+    checklist_item = serializers.CharField(max_length=150)
+    file = serializers.FileField()
+
+
 class ApplicationViewSet(ScopedAdmissionViewSet):
     serializer_class = ApplicationSerializer
     queryset = Application.objects.all()
     allowed_roles = ADMISSION_VIEW_ROLES
+    verb_map = {
+        "create": "create",
+        "update": "update",
+        "partial_update": "update",
+        "destroy": "delete_or_archive",
+        "submit": "submit",
+        "review": "review",
+        "decide": "approve",
+        "offer": "approve",
+        "accept": "approve",
+        "enrol": "approve",
+        "upload_document": "upload",
+    }
 
     def get_permissions(self):
-        if self.action in {"decide", "offer", "accept", "enrol"}:
-            self.allowed_roles = ADMISSION_DECIDE_ROLES
+        if self.action == "upload_document":
+            self.module = "documents"
         return super().get_permissions()
 
     def perform_create(self, serializer):
         application = services.create_application(self.request.user, **serializer.validated_data)
         serializer.instance = application
+
+    @action(detail=True, methods=["post"], parser_classes=[MultiPartParser, FormParser])
+    def upload_document(self, request, pk=None):
+        application = self.get_object()
+        payload = DocumentUploadSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        uploaded = payload.validated_data["file"]
+        try:
+            name, content_type, size = prepare_document_upload(uploaded)
+        except ValueError as exc:
+            raise ValidationError({"file": str(exc)}) from exc
+        scan = scan_document(uploaded, "private_documents")
+        storage = private_document_storage()
+        stored_name = storage.save(name, uploaded)
+        document = ApplicationDocument.objects.create(
+            application=application,
+            checklist_item=payload.validated_data["checklist_item"],
+            original_name=uploaded.name,
+            file_ref=stored_name,
+            file=stored_name,
+            content_type=content_type,
+            size_bytes=size,
+        )
+        log_event(
+            "documents.uploaded",
+            actor=request.user,
+            target_type="admissions.ApplicationDocument",
+            target_id=document.pk,
+            institution_id=application.institution_id,
+            campus_id=application.campus_id,
+            reason=payload.validated_data["checklist_item"],
+            metadata={"scan": scan, "size_bytes": size},
+        )
+        return Response(ApplicationDocumentSerializer(document).data, status=201)
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
@@ -294,6 +358,9 @@ class ApplicationDocumentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ApplicationDocumentSerializer
     permission_classes = BASE_PERMISSIONS
     allowed_roles = ADMISSION_VIEW_ROLES
+    module = "documents"
+    verb = "view"
+    verb_map = {"download": "download"}
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -306,3 +373,23 @@ class ApplicationDocumentViewSet(viewsets.ReadOnlyModelViewSet):
         if user.campus_id:
             qs = qs.filter(application__campus_id=user.campus_id)
         return qs
+
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        document = self.get_object()
+        self.check_object_permissions(request, document)
+        log_event(
+            "documents.downloaded",
+            actor=request.user,
+            target_type="admissions.ApplicationDocument",
+            target_id=document.pk,
+            institution_id=document.institution_id,
+            campus_id=document.campus_id,
+            reason="authenticated_download",
+        )
+        return FileResponse(
+            document.file.open("rb"),
+            as_attachment=True,
+            filename=document.original_name,
+            content_type=document.content_type or "application/octet-stream",
+        )

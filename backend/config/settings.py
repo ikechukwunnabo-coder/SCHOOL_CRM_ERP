@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.guardians",
     "apps.admissions",
     "apps.students",
+    "apps.imports",
 ]
 
 MIDDLEWARE = [
@@ -140,6 +141,32 @@ STORAGES = {
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+STORAGE_BACKEND = env("STORAGE_BACKEND", default="local")
+PRIVATE_MEDIA_ROOT = BASE_DIR / env("PRIVATE_MEDIA_ROOT", default="private-media")
+PUBLIC_MEDIA_ROOT = BASE_DIR / env("PUBLIC_MEDIA_ROOT", default="public-media")
+DOCUMENT_UPLOAD_MAX_BYTES = env.int("DOCUMENT_UPLOAD_MAX_BYTES", default=10 * 1024 * 1024)
+DOCUMENT_MALWARE_SCAN_HOOK = env("DOCUMENT_MALWARE_SCAN_HOOK", default="")
+
+if STORAGE_BACKEND == "s3":
+    STORAGES["private_documents"] = {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {
+            "bucket_name": env("AWS_PRIVATE_STORAGE_BUCKET", default="school-erp-private"),
+            "location": env("AWS_PRIVATE_STORAGE_LOCATION", default="documents"),
+            "default_acl": "private",
+            "querystring_auth": True,
+        },
+    }
+else:
+    STORAGES["private_documents"] = {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": str(PRIVATE_MEDIA_ROOT), "base_url": None},
+    }
+STORAGES["public_media"] = {
+    "BACKEND": "django.core.files.storage.FileSystemStorage",
+    "OPTIONS": {"location": str(PUBLIC_MEDIA_ROOT), "base_url": MEDIA_URL},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

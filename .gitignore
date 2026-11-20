@@ -24,6 +24,8 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media/
+private-media/
+public-media/
 staticfiles/
 static_collected/
 

@@ -11,6 +11,7 @@ from .services import (
     user_can_access_campus_id,
     user_can_access_institution,
     user_has_active_role_for_institution,
+    user_has_module_permission,
 )
 
 
@@ -105,6 +106,37 @@ class HasRole(BasePermission):
             reason="missing_required_role",
             target_type="permissions.Role",
             metadata={"required_roles": sorted(allowed)},
+        )
+
+
+class HasModuleVerbPermission(BasePermission):
+    """Require a configurable module/verb grant (D-026/D-027)."""
+
+    message = "Your role is not permitted to perform this action."
+    module = ""
+    verb = "view"
+    resource = "*"
+    verb_map: dict[str, str] = {}
+
+    def has_permission(self, request, view):
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated or not user.is_active:
+            return False
+        if user.is_superuser:
+            return True
+        module = getattr(view, "module", self.module)
+        action = getattr(view, "action", "")
+        verb = getattr(view, "verb_map", self.verb_map).get(action, self.verb)
+        resource = getattr(view, "resource", self.resource)
+        if not module:
+            return True
+        if user_has_module_permission(user, module, verb, resource=resource):
+            return True
+        return _deny(
+            request,
+            reason="missing_module_permission",
+            target_type="permissions.Permission",
+            metadata={"module": module, "verb": verb, "resource": resource},
         )
 
 

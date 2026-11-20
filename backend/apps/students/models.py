@@ -5,6 +5,12 @@ from django.db import models
 
 from apps.core.models import TimeStampedModel
 
+STUDENT_GENDER_VALUES = {"male", "female", "other", "unspecified"}
+
+def build_identity_key(first_name: str, last_name: str, date_of_birth) -> str:
+    raw = f"{first_name.strip().lower()}|{last_name.strip().lower()}|{date_of_birth.isoformat()}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
 
 class Student(TimeStampedModel):
     class Gender(models.TextChoices):
@@ -85,12 +91,11 @@ class Student(TimeStampedModel):
         return f"{self.admission_number}: {self.first_name} {self.last_name}".strip()
 
     def save(self, *args, **kwargs):
-        raw = (
-            f"{self.first_name.strip().lower()}|"
-            f"{self.last_name.strip().lower()}|"
-            f"{self.date_of_birth.isoformat()}"
+        self.identity_key = build_identity_key(
+            self.first_name,
+            self.last_name,
+            self.date_of_birth,
         )
-        self.identity_key = hashlib.sha256(raw.encode("utf-8")).hexdigest()
         super().save(*args, **kwargs)
 
     @property
