@@ -4,7 +4,7 @@
 **Phase:** 0 — Discovery, Architecture & Implementation Readiness  
 **Document status:** Approved for Phase 1 foundation start (conditional) — documented and cleared for implementation to proceed as specified  
 **Authoritative specification:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`  
-**Revision date:** 19 November 2026  
+**Revision date:** 20 November 2026  
 **Primary backend runtime:** Python 3.14.x (D-010 validated in Phase 1 scaffold/CI on 2026-11-20)  
 **Architecture:** Modular monolith, API-first
 
@@ -36,7 +36,7 @@ The following decisions establish the initial project direction and are approved
 
 **Decision:** Python 3.14.x is the approved provisional backend runtime target.
 
-**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI run `44758174938`, PostgreSQL 18 runtime). Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
+**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI run `44761962350`, PostgreSQL 18 runtime). Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
 
 ### 2.1 Backend technology baseline
 
@@ -567,6 +567,13 @@ No shared production administrator account should be used.
 **Owner:** Management / IT / DevOps  
 **Approval:** Approved requirement. Production ownership/contacts to be assigned and recorded before staging/production go-live (Q-007). Non-blocking for Phase 1 foundation.
 
+## D-026 — RBAC role/permission baseline approval
+
+**Decision:** Adopt the role definitions, scope-aware matrix and sensitive-action controls in `RBAC_PERMISSION_MATRIX.md` as the approved MVP authorization baseline. Deny-by-default remains mandatory; each domain phase refines per-verb grants, record-level predicates and approval thresholds as configurable data with negative authorization tests.
+
+**Owner:** Product / Security / School Management  
+**Approval:** Approved on 2026-11-20; permission granted to proceed to Phase 2 (Student & Admissions). Approval is for the documented baseline, not a claim that every matrix entry is already implemented/tested; incremental enforcement remains under Phase 2+ code review and tests.
+
 ---
 
 # 4. Open Questions Requiring Institutional Input
@@ -631,10 +638,10 @@ The following documents are mandatory:
 | P0-002 | System Architecture | `docs/architecture/SYSTEM_ARCHITECTURE.md` | Drafted |
 | P0-003 | Entity Relationship Diagram | `docs/architecture/ENTITY_RELATIONSHIP_DIAGRAM.md` | Drafted |
 | P0-004 | Data Dictionary | `docs/architecture/DATA_DICTIONARY.md` | Drafted |
-| P0-005 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Drafted |
+| P0-005 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (2026-11-20; D-026 MVP baseline) |
 | P0-006 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Drafted |
 | P0-007 | API Design | `docs/architecture/API_DESIGN.md` | Drafted |
-| P0-008 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Drafted (verification pending) |
+| P0-008 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Verified (2026-11-20; D-010) |
 | P0-009 | Integration Specifications | `docs/architecture/INTEGRATION_SPECIFICATIONS.md` | Drafted |
 | P0-010 | Security and Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Drafted |
 | P0-011 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Drafted |
@@ -679,7 +686,7 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-025 | Approved for implementation as recorded (D-010 validated in Phase 1/M1; D-012/D-013/D-016–D-019 include interim approaches pending external inputs) |
+| D-001–D-026 | Approved for implementation as recorded (D-010 validated in Phase 1/M1; D-026 approves the RBAC baseline and Phase 2 progression; D-012/D-013/D-016–D-019 include interim approaches pending external inputs) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
@@ -694,20 +701,20 @@ Changing an approved decision requires a documented change request and impact as
 
 # 9. Phase 0 Readiness Recommendation
 
-**Recommended status: CONDITIONAL GO — Cleared to begin Phase 1 foundation**
+**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2 approved to proceed (D-026)**
 
 The project may proceed now with:
-- Phase 1 foundation implementation (project structure, scaffold, environment/config, Docker dev setup, CI, base modules) per `IMPLEMENTATION_ROADMAP.md`.
-- Technology compatibility verification and lockfile resolution in the scaffold (D-010, M1 gate).
-- Implementation of approved architectures/approaches (auth, RBAC/audit frameworks, storage abstraction, adapters) without blocking on unselected providers.
+- Phase 2 Student & Admissions implementation per `IMPLEMENTATION_ROADMAP.md`, using the approved RBAC baseline (D-026).
+- Completion of remaining Phase 1 hardening (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
+- Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.
 
 Selection of payment, SMS, email or storage providers does not block provider-independent interface development, provided the integration design is documented and approved (as recorded).
 
 ### Conditions during/after foundation start
 
-1. Confirm the technology compatibility matrix for Python 3.14 and commit backend/frontend lockfiles (Phase 1/M1).
-2. Implement and validate the approved authentication and authorization architecture (D-011).
+1. Maintain the validated technology compatibility matrix and lockfiles (D-010) as dependencies change.
+2. Enforce the approved authentication and authorization architecture (D-011/D-026) in each module.
 3. Enforce and review database ERD/data dictionary and migrations as developed.
 4. Implement RBAC per the approved matrix with negative authorization tests.
 5. Finalize/refine backend application ownership and dependencies per D-020.

@@ -18,7 +18,7 @@ Phase 0 discovery artifacts have been drafted to translate the master specificat
 | 2 | System Architecture | `docs/architecture/SYSTEM_ARCHITECTURE.md` | Drafted (documented) |
 | 3 | Entity Relationship Diagram (proposed) | `docs/architecture/ENTITY_RELATIONSHIP_DIAGRAM.md` | Drafted (documented) |
 | 4 | Data Dictionary (initial) | `docs/architecture/DATA_DICTIONARY.md` | Drafted (documented) |
-| 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Drafted (documented) |
+| 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (2026-11-20; D-026 MVP baseline) |
 | 6 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Drafted (documented) |
 | 7 | API Design | `docs/architecture/API_DESIGN.md` | Drafted (documented) |
 | 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Drafted (documented, **unverified**) |
@@ -65,7 +65,7 @@ Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 | Clear inventory/procurement/asset/finance boundaries | **Specified** | Distinct modules + integration/traceability rules; **not implemented** |
 | Student/staff ID cards from existing biodata, secure verification | **Specified** | Lifecycle, non-guessable token QR; **not implemented** |
 | Public CMS isolated from private ERP records | **Specified** | Published-only/public endpoints whitelisted; **not implemented** |
-| Sensitive operations authorized & audited | **Specified** | RBAC scopes + audit events defined; **not implemented** |
+| Sensitive operations authorized & audited | **Specified / baseline approved** | RBAC scopes + audit events approved as MVP baseline (D-026); institution/campus enforcement and authz denial audit implemented; per-module coverage pending |
 
 ## 5. Risks & Dependencies
 

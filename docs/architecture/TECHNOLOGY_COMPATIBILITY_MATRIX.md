@@ -1,6 +1,6 @@
 # Technology Compatibility Matrix
 
-**Status:** Scaffold validated (2026-11-20): PostgreSQL 18 container healthy, backend checks/lint/tests passing against PostgreSQL 18, frontend build green in remote CI (run `44758174938`). D-010 confirmed for the committed pins with documented deviations below.
+**Status:** Scaffold validated (2026-11-20): PostgreSQL 18 container healthy, backend checks/lint/tests passing against PostgreSQL 18, frontend build green in remote CI (run `44761962350`). D-010 confirmed for the committed pins with documented deviations below.
 
 > Per Master Spec: verify official compatibility and security support, pin exact compatible versions, commit lockfiles. Do not blindly install unpinned latest versions.
 
@@ -29,7 +29,7 @@
 - **Backend on PostgreSQL 18:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**15 passed**: health endpoint, CSRF/login/me/logout flow, auth audit events, RBAC helpers/scopes, institution/campus API cross-scope denial, audit redaction). Django applied migrations while creating the test database on PostgreSQL 18.
 - **Containers:** `docker compose up -d db redis` healthy (Postgres 18.7, Redis 8). A native Windows PostgreSQL on host port 5432 shadows the published container port; use the compose network for container-side validation.
 - **Frontend:** `npm run build` (`tsc -b && vite build`) pass locally and in remote CI on Node 22.
-- **Remote CI:** green (`CI` run `44758174938`, both backend and frontend jobs) against pinned `backend/requirements.txt` and `frontend/package-lock.json`.
+- **Remote CI:** green (`CI` run `44761962350`, both backend and frontend jobs) against pinned `backend/requirements.txt` and `frontend/package-lock.json`.
 - **Dependencies/locks:** `backend/requirements.txt` and `backend/requirements-dev.txt` pinned (pip freeze); `frontend/package-lock.json` committed. Deviation from the `uv`/`pnpm` target: neither tool is installed in this environment, so pip freeze + npm lock are the committed locks.
 - **Not validated:** backend Docker image export hangs in Docker Desktop; Celery worker and containerized backend runtime not yet exercised.
 
@@ -46,7 +46,7 @@
 - [x] Confirm Django 5.2 LTS / Python 3.14 / psycopg 3 compatibility in the executed CI and local PostgreSQL 18 run
 - [ ] Confirm DRF, Celery, Redis client, auth/storage libs compatibility in an integrated Celery/Redis runtime
 - [ ] Validate `docker compose` backend/celery services and containerized workflows (db/redis and frontend image validated)
-- [x] Achieve green CI run on pinned artifacts (`44758174938`)
+- [x] Achieve green CI run on pinned artifacts (`44761962350`)
 - [ ] Review security support/EOL dates and harden pins as needed
 - [ ] Replace pip freeze/npm locks with `uv.lock`/`pnpm-lock.yaml` when those tools are available (D-010 deviation)
 
