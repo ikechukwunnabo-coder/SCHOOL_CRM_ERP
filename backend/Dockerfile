@@ -10,9 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml /app/
-# Lockfile to be added (D-010). For now install from pyproject via pip.
-RUN pip install --upgrade pip && pip install .
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY . /app
 
