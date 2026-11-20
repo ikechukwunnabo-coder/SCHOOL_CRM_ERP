@@ -5,7 +5,7 @@
 **Document status:** Approved for Phase 1 foundation start (conditional) — documented and cleared for implementation to proceed as specified  
 **Authoritative specification:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`  
 **Revision date:** 19 November 2026  
-**Primary backend runtime:** Python 3.14.x (approved provisional baseline; validate in Phase 1 scaffold/CI per D-010)  
+**Primary backend runtime:** Python 3.14.x (D-010 validated in Phase 1 scaffold/CI on 2026-11-20)  
 **Architecture:** Modular monolith, API-first
 
 > **Governance statement:** This register records decisions and approaches cleared for implementation start. Approval of an architectural approach does **not** mean implementation, compatibility verification, or production acceptance is complete. No feature is considered implemented or tested merely because it appears in this document. Provisional items (especially D-010) must be validated during Phase 1 (scaffold/CI). External inputs (Q-001–Q-012) remain tracked and must be resolved before affected milestones, UAT, and production go-live.
@@ -36,7 +36,7 @@ The following decisions establish the initial project direction and are approved
 
 **Decision:** Python 3.14.x is the approved provisional backend runtime target.
 
-**Approval:** Approved (provisional baseline for Phase 1). Exact patch versions and complete dependency lockfiles must be resolved, committed, and verified by scaffold/CI during Phase 1 (M1 gate). Any incompatibility discovered must be addressed via documented change control.
+**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI run `44758174938`, PostgreSQL 18 runtime). Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
 
 ### 2.1 Backend technology baseline
 
@@ -679,16 +679,16 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-025 | Approved for implementation as recorded (D-010 provisional baseline pending CI/scaffold verification; D-012/D-013/D-016–D-019 include interim approaches pending external inputs) |
-| Python 3.14 selected as target | Yes — approved provisional baseline (validate in Phase 1 scaffold/CI) |
-| Exact dependency lockfiles | Pending — to be created and verified in Phase 1 |
+| D-001–D-025 | Approved for implementation as recorded (D-010 validated in Phase 1/M1; D-012/D-013/D-016–D-019 include interim approaches pending external inputs) |
+| Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
+| Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
 | School-specific academic policies | Pending confirmation (Q-003) — configurable placeholders approved |
 | Infrastructure selection | Pending (Q-005) — targets/approach approved |
 | Architecture validation | Blueprint reviewed/documented; to be enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register (subject to ongoing governance) |
-| Implementation | Not started (cleared to begin Phase 1 foundation) |
-| Testing | Not performed |
+| Implementation | Phase 1 foundation partially implemented; domain modules pending |
+| Testing | Backend/frontend validated locally and in remote CI (15 backend tests); containerized backend runtime pending |
 
 ---
 

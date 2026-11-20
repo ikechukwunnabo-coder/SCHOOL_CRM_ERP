@@ -5,7 +5,7 @@
 **Authoritative spec:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md` (1,828 lines)  
 **Phase reference:** `# PHASE 0.md`
 
-> **Status distinction:** This report and the architecture documents are **DOCUMENTED** only. No decisions below are formally **APPROVED** by owners. **Nothing has been IMPLEMENTED or TESTED** (no application code, migrations, or test execution).
+> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1 foundation code, migrations and tests now exist. See `README.md`, `IMPLEMENTATION_ROADMAP.md` and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
 
 ## 1. Executive Summary
 Phase 0 discovery artifacts have been drafted to translate the master specification into an implementation-ready blueprint. Core architecture, domain boundaries, ERD/data dictionary, RBAC, workflows, API conventions, and plans for technology, integrations, security, testing, deployment, and roadmap are documented. However, multiple material decisions require verification/approval and external inputs (versions, auth finalization, providers/credentials, infra, school-specific rules). **Recommendation: CONDITIONAL GO** for Release 1 development, contingent on resolving/approving the gating items in §4 and §6.
