@@ -1,5 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { apiFetch, getCsrf } from "../api/client";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { UNAUTHORIZED_EVENT, apiFetch, getCsrf } from "../api/client";
+
+export type RoleAssignment = {
+  role: string;
+  role_id: string;
+  is_system: boolean;
+  scope_type: string;
+  scope_ref_id: string | null;
+  institution_id: string | null;
+};
 
 export type User = {
   id: string;
@@ -10,6 +19,7 @@ export type User = {
   campus: string | null;
   is_staff: boolean;
   is_active: boolean;
+  roles: RoleAssignment[];
 };
 
 type AuthContextValue = {
@@ -28,9 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
-      setError(null);
       const res = await apiFetch<{ user: User }>("/auth/me/");
       setUser(res.user);
     } catch {
@@ -38,14 +47,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    // Prime CSRF cookie for session-auth flows, then load session user
-    getCsrf().catch(() => null).finally(() => void refresh());
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -55,29 +59,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
       setUser(res.user);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Login failed";
-      setError(msg);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Login failed");
       setUser(null);
-      throw e;
+      throw cause;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setLoading(true);
     try {
       await apiFetch<void>("/auth/logout/", { method: "POST" });
     } catch {
-      // ignore
+      setError(null);
     } finally {
       setUser(null);
+      setError(null);
       setLoading(false);
     }
-  };
+  }, []);
 
-  const value = useMemo(() => ({ user, loading, error, login, logout, refresh }), [user, loading, error]);
+  useEffect(() => {
+    getCsrf().catch(() => null).finally(() => void refresh());
+  }, [refresh]);
+
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setUser(null);
+      setLoading(false);
+      setError("Your session has expired. Sign in again.");
+    };
+    window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized);
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, error, login, logout, refresh }),
+    [user, loading, error, login, logout, refresh],
+  );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

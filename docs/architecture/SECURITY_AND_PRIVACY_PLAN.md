@@ -1,6 +1,6 @@
 # Security and Privacy Plan
 
-**Status:** Living plan. M1–M2 controls are implemented; M3 adds RBAC grants/privileged attendance corrections and M4 adds examinations/transcript workflow grants, separation-of-duties checks, hash-only public verification, private PDF storage, and application-level audit events. Broader API role/negative tests, DB-level audit immutability, and production controls remain open.
+**Status:** Living plan. M1–M2 controls are implemented; M3/M4 add RBAC grants, privileged corrections, separation-of-duties checks, hash-only public verification, private PDF storage, object-level queryset scoping, DB-level immutable/tamper-evident audit chain, and role/negative plus cross-scope/IDOR tests. M3/M4 remain not accepted pending UAT/sign-off and Q-003; production controls remain open.
 
 ## 1. Security Objectives
 - Protect confidentiality, integrity, and availability of student, guardian, staff, medical, academic, and financial data.
@@ -30,7 +30,7 @@
 - **M3 implemented:** deny-by-default module/verb grants for `employees`, `academics`, `teaching`, `attendance`; `my-assignments` and attendance service methods enforce teacher-scoped checks; attendance corrections require reason and privileged approval grants.
 - **M4 implemented:** deny-by-default `examinations` grants; assigned-offering enforcement for teacher result entry; self-approval denial; exam-officer/principal approval and publication grants; reason-required corrections with preserved prior values.
 - **M4 transcript implemented:** deny-by-default `transcripts` grants; institution/campus-scoped querysets; request self-approval denial; reason-required rejection/correction/revocation; authenticated private PDF download; public token verification that stores only hashes and returns no student personal data.
-- **M3 caveat:** most M3 queryset scoping is institution-level + service-level rather than object-level queryset filtering; API role/negative tests and role-name alignment (`Academic Head`/`Teacher` vs matrix roles) remain required before acceptance.
+- **M3/M4 closure:** object-level queryset scoping is applied to implemented APIs; role/negative and cross-scope/IDOR tests cover M3/M4 grants. Canonical role names match the matrix with backward-compatible aliases (`Academic Head`, `Teacher`, `Principal`, `Principal/VP`). Formal UAT/sign-off and Q-003 remain before acceptance.
 
 ## 5. Application & API Security
 - Input validation (server-side authoritative), output encoding, parameterized ORM/queries (no raw SQL injection), safe file handling.
@@ -50,14 +50,15 @@
 ## 7. File & Document Security
 - Validate extension, MIME type, size; safe generated storage names; malware-scan integration point.
 - Private documents stored outside public web roots in private buckets/paths; access via authenticated endpoints or short-lived signed URLs **after** authz checks.
-- Transcript PDFs are private-by-default, stored via `private_document_storage`, and served only through an RBAC/scope-checked download endpoint with an audit event.
+- Transcript and report-card PDFs are private-by-default, stored via `private_document_storage`, and served only through RBAC/scope-checked download endpoints with audit events; report-card records retain hash and snapshot metadata.
 - Verification tokens are high-entropy random values; only SHA-256 hashes are persisted for lookup, QR/text embeds the verification path, and public outcomes exclude student identifiers.
 - Separate public CMS media from confidential ERP documents; explicit publication controls.
 
 ## 8. Audit Logging & Integrity
 - Immutable/tamper-evident audit records for: logins/security events, user/role/permission changes, student/teacher-allocation/attendance/result/report-card/transcript/finance/CMS/export/import sensitive operations (per Master Spec §28).
 - Capture actor, action, target, timestamp, reason (where relevant), safe change summary; restrict read access and prevent ordinary modification/deletion.
-- M3 writes application-level audit events for assignments, timetable slots, attendance marking/closing/corrections; M4 writes events for scheme/component/scale configuration, result recording/submission/review/approval/publication/correction, report-card generation, transcript request/approval/generation/issue/correction/revocation/download, and verification outcomes. DB-level immutability/tamper-evidence is not implemented.
+- M3 writes application-level audit events for assignments, timetable slots/publish transitions, attendance marking/closing/corrections and teacher attendance; M4 writes events for scheme/component/scale/policy configuration, result recording/submission/review/approval/publication/correction, report-card generation/download, transcript request/approval/generation/issue/correction/revocation/download, verification outcomes, and alumni linkage.
+- DB-level immutability/tamper-evidence is implemented: sequenced per-institution/global hashes with predecessor linkage, unique sequence/hash constraints, `editable=False` timestamps, and PostgreSQL triggers rejecting UPDATE/DELETE on `AuditLog`. `python manage.py verify_audit_chain` verifies sequence, predecessor hash and entry hash integrity (optionally `--institution-id`); local verification is valid.
 - Official records (results, transcripts, posted finance, IDs) managed via controlled workflows, versioning, and reversals—no silent destructive edits.
 
 ## 9. Dependency, Infrastructure & Operations Security
@@ -68,11 +69,12 @@
 ## 10. Secure SDLC & Verification
 - Security requirements and threat-aware reviews in design (Phase 0 onward).
 - Automated tests: authn/authz positive & negative (incl. cross-tenant/campus/IDOR), workflow/state integrity, input validation, file access controls.
-- Current evidence is 39 backend tests (29 M3 + 5 M4 examinations + 5 transcript); M4 covers teacher scope, approval/publication API denials, transcript permission denial, private PDF download, and public verification outcomes. Add broader API role/negative tests for M3 grants and privileged attendance corrections before M3 acceptance.
+- Current local evidence: `pytest -q` -> 68 passed against PostgreSQL 18, `verify_audit_chain` valid, `npm run lint` pass, `npm test` -> 17 passed, `npm run build` pass, `npm run test:e2e` -> 2 mocked specs passed. Coverage includes teacher scope, object-level/IDOR denial, role/negative API tests, approval/publication API denials, transcript/report-card private PDF download, public verification outcomes, and audit-chain tamper detection. CI config now includes backend audit-chain verification and frontend lint/E2E, but closure code is uncommitted/unpushed, so remote CI evidence is pending with no run ID.
 - Pre-production: security review, dependency scan, configuration review; periodic reassessment.
 
 ## 11. Open Items (Pending)
 - Confirm compliance/regulatory obligations applicable to the institution/jurisdiction.
 - Finalize data retention schedule and incident response contacts/runbook (with Ops plan); D-011 secure-cookie/CSRF flow is implemented.
 - Provider DPAs and data residency/processing terms (integrations/storage).
-- M3 acceptance security gates: API role/negative tests, object-level scope filtering, role-name alignment, and DB-level audit immutability.
+- M3/M4 acceptance gates: formal UAT/sign-off on the locally validated security controls and Q-003 official grading-policy confirmation; remote CI evidence for the closure pending commit/push.
+- Containerized backend/Celery runtime and Celery/Redis integration remain separate infrastructure validation items.

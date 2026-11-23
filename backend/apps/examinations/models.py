@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import F, Q
 
 from apps.core.models import TimeStampedModel
+from apps.core.storage import private_document_storage
 
 
 class AssessmentScheme(TimeStampedModel):
@@ -140,6 +141,49 @@ class GradingScale(TimeStampedModel):
             models.CheckConstraint(
                 condition=Q(pass_mark__gte=0),
                 name="ck_grading_scale_pass_mark_non_negative",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
+class GradingPolicy(TimeStampedModel):
+    institution = models.ForeignKey(
+        "institutions.Institution",
+        on_delete=models.PROTECT,
+        related_name="grading_policies",
+    )
+    campus = models.ForeignKey(
+        "institutions.Campus",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="grading_policies",
+    )
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=30)
+    grading_scale = models.ForeignKey(
+        GradingScale,
+        on_delete=models.PROTECT,
+        related_name="grading_policies",
+    )
+    effective_from = models.DateField()
+    effective_to = models.DateField(null=True, blank=True)
+    result_completeness_rules = models.JSONField(default=dict)
+    report_card_settings = models.JSONField(default=dict)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["institution__code", "-effective_from", "code"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["institution", "code"],
+                name="uq_grading_policy_institution_code",
+            ),
+            models.CheckConstraint(
+                condition=Q(effective_to__isnull=True) | Q(effective_to__gte=F("effective_from")),
+                name="ck_grading_policy_effective_dates",
             ),
         ]
 
@@ -357,6 +401,17 @@ class ReportCard(TimeStampedModel):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PUBLISHED)
     template_version = models.CharField(max_length=40, default="default-v1")
     results_snapshot = models.JSONField(default=list)
+    document_snapshot = models.JSONField(default=dict)
+    file = models.FileField(
+        storage=private_document_storage,
+        upload_to="report_cards/%Y/%m/",
+        max_length=500,
+        blank=True,
+    )
+    file_ref = models.CharField(max_length=500, blank=True)
+    content_type = models.CharField(max_length=150, default="application/pdf")
+    size_bytes = models.PositiveBigIntegerField(default=0)
+    pdf_sha256 = models.CharField(max_length=64, blank=True)
     generated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

@@ -6,6 +6,41 @@ from apps.core.models import TimeStampedModel
 from apps.employees.models import Employee
 
 
+class TeacherWorkloadPolicy(TimeStampedModel):
+    institution = models.ForeignKey(
+        "institutions.Institution",
+        on_delete=models.PROTECT,
+        related_name="teacher_workload_policies",
+    )
+    campus = models.ForeignKey(
+        "institutions.Campus",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="teacher_workload_policies",
+    )
+    name = models.CharField(max_length=100, default="Teacher workload")
+    effective_from = models.DateField()
+    effective_to = models.DateField(null=True, blank=True)
+    max_hours = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["institution__code", "campus__code", "-effective_from"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(max_hours__gt=0), name="ck_workload_policy_max_hours"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(effective_to__isnull=True)
+                | models.Q(effective_to__gte=models.F("effective_from")),
+                name="ck_workload_policy_dates",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name}: {self.max_hours}h"
+
+
 class TeacherAssignment(TimeStampedModel):
     class Role(models.TextChoices):
         LEAD = "lead", "Lead"
@@ -79,9 +114,32 @@ class Timetable(TimeStampedModel):
     arm = models.ForeignKey(
         Arm, on_delete=models.PROTECT, null=True, blank=True, related_name="timetables"
     )
+    revision_of = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="revisions",
+    )
     name = models.CharField(max_length=100)
     version = models.PositiveIntegerField(default=1)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="timetables_approved",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="timetables_published",
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["session__code", "class_level__code", "version"]
@@ -101,6 +159,10 @@ class Timetable(TimeStampedModel):
 
 
 class TimetableSlot(TimeStampedModel):
+    class Recurrence(models.TextChoices):
+        SINGLE = "single", "Single"
+        WEEKLY = "weekly", "Weekly"
+
     timetable = models.ForeignKey(Timetable, on_delete=models.CASCADE, related_name="slots")
     day_of_week = models.PositiveSmallIntegerField()
     period = models.PositiveSmallIntegerField()
@@ -109,13 +171,22 @@ class TimetableSlot(TimeStampedModel):
     )
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name="timetable_slots")
     room = models.CharField(max_length=100)
+    recurrence = models.CharField(
+        max_length=20, choices=Recurrence.choices, default=Recurrence.WEEKLY
+    )
+    recurrence_interval = models.PositiveSmallIntegerField(default=1)
+    recurrence_until = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ["timetable__version", "day_of_week", "period"]
         constraints = [
             models.UniqueConstraint(
                 fields=["timetable", "day_of_week", "period"], name="uq_slot_timetable_day_period"
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(recurrence_interval__gt=0),
+                name="ck_slot_recurrence_interval",
+            ),
         ]
 
     @property

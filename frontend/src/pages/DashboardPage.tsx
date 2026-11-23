@@ -1,44 +1,56 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../auth/AuthContext";
+import { Link } from "react-router-dom";
 import { apiFetch } from "../api/client";
+import { can, roleNames } from "../auth/permissions";
+import { useAuth } from "../auth/AuthContext";
+import { PageHeading } from "../components/Feedback";
+import { Panel } from "../components/Panel";
+
+const LINKS = [
+  { to: "/academics/calendar", label: "Academic calendar", module: "academics" },
+  { to: "/academics/timetable", label: "Timetable", module: "teaching" },
+  { to: "/teaching/workload", label: "Teacher workload", module: "teaching" },
+  { to: "/attendance/students", label: "Student attendance", module: "attendance" },
+  { to: "/attendance/teachers", label: "Teacher attendance", module: "attendance" },
+  { to: "/examinations/results", label: "Results workflow", module: "examinations" },
+  { to: "/examinations/report-cards", label: "Report cards", module: "examinations" },
+  { to: "/transcripts", label: "Transcripts", module: "transcripts" },
+] as const;
 
 export function DashboardPage() {
-  const { user, logout } = useAuth();
-  const [health, setHealth] = useState<string>("checking...");
+  const { user } = useAuth();
+  const [health, setHealth] = useState("checking...");
 
   useEffect(() => {
     apiFetch<{ status: string; database: string }>("/health/")
-      .then((d) => setHealth(`${d.status} (db: ${d.database})`))
+      .then((data) => setHealth(`${data.status} (db: ${data.database})`))
       .catch(() => setHealth("unavailable"));
   }, []);
 
+  const available = LINKS.filter((link) => can(user, link.module, "view"));
+
   return (
-    <div className="page">
-      <header className="topbar">
-        <div>
-          <h2>Foundation Dashboard</h2>
-          <p className="muted">Phase 1 scaffold — authenticated context</p>
-        </div>
-        <button onClick={() => void logout()}>Sign out</button>
-      </header>
-      <main className="grid">
-        <section className="card">
-          <h3>Current user</h3>
-          <pre>{JSON.stringify(user, null, 2)}</pre>
-        </section>
-        <section className="card">
-          <h3>API health</h3>
+    <div className="page-stack">
+      <PageHeading title="School operations" description="Academic, attendance, examination, and transcript workflows for your role." />
+      <div className="grid">
+        <Panel title="Signed-in user">
+          <p>{user?.email}</p>
+          <p className="muted small">{roleNames(user).join(", ") || "No active roles"}</p>
+          <p className="muted small">Institution: {user?.institution || "not set"}</p>
+        </Panel>
+        <Panel title="API health">
           <p>{health}</p>
-        </section>
-        <section className="card">
-          <h3>Status</h3>
-          <ul>
-            <li>Auth: session/cookie baseline (D-011)</li>
-            <li>RBAC/Audit: models & middleware stubs created</li>
-            <li>Domain modules: pending (Phase 2+)</li>
-          </ul>
-        </section>
-      </main>
+        </Panel>
+      </div>
+      <Panel title="Available workflows">
+        <div className="link-grid">
+          {available.map((link) => (
+            <Link key={link.to} to={link.to} className="workflow-link">
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </Panel>
     </div>
   );
 }

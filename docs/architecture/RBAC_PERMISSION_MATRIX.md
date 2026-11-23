@@ -1,6 +1,6 @@
 # RBAC Permission Matrix
 
-**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented through the M4 examinations/transcript backend slices, with M3 and M4 treated as open hardening slices. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M4 modules; record-level predicates, approval thresholds, role-name alignment, and broader negative API tests remain outstanding.
+**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented locally through M3/M4 hardening. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M4 modules, with object-level queryset scoping, canonical role names plus backward-compatible aliases, and role/negative plus cross-scope/IDOR API tests. M3/M4 remain not accepted pending UAT/sign-off and Q-003; approval thresholds and remaining domain-specific predicates continue to be refined.
 
 ## 1. Principles
 - **Deny-by-default:** no access unless explicitly granted.
@@ -28,11 +28,12 @@ Legend: **F**=Full (within scope), **S**=Scoped/limited, **O**=Own/linked only, 
 | Admissions/Enquiries/Applications | F | S | S/A | - | - | - | - | F (create/review/process) | R(fees) | - | - | S(applicant/own where enabled) | - | - |
 | Academic structure (sessions/terms/classes/arms/subjects/offerings) — M3 | F | S | S/A | S(dept) | R(class) | R(assigned) | S | R | - | - | - | R(limited) | R(limited) | - |
 | Teacher allocations (teaching) — M3 | F | S | S/A | S/A(dept) | R(own class context) | R(own) | R | R | - | R(staff refs) | - | - | - | - |
-| Timetable (draft/versioned slots) — M3 | F | S | S/A | S | R(class) | R(own) | R | R | - | - | - | R(linked) | R(self) | - |
-| Attendance (student offering-based; staff not implemented) — M3 | F | S | S | S | S(class mark/correct*) | S(assigned class/subject mark*) | R | R | - | S(staff) | - | R(linked) | R(self) | - |
+| Timetable (recurrence + draft/approve/publish/revise) — M3 | F | S | S/A | S | R(class) | R(own) | R | R | - | - | - | R(linked) | R(self) | - |
+| Attendance (student offering-based + teacher attendance) — M3 | F | S | S | S | S(class mark/correct*) | S(assigned class/subject mark*) | R | R | - | S(staff) | - | R(linked) | R(self) | - |
 | Assessments/Results (entry/workflow) — M4 backend | F | S | A | A(review scope) | R(class overview) | S(entry/submit for assigned only) | F/A(config/workflow) | R | - | - | - | R(published, linked; portal pending) | R(published, self; portal pending) | - |
-| Report cards — M4 backend | F | S | A/publish | R | R(class) | R(assigned) | S(generate/manage per policy) | R | - | - | - | R(published, linked; portal pending) | R(published, self; portal pending) | - |
+| Report cards — M4 | F | S | A/publish | R | R(class) | R(assigned) | S(generate/manage per policy) | R | - | - | - | R(published, linked; portal pending) | R(published, self; portal pending) | - |
 | Transcripts (official) | F | S | A/issue | R | - | - | S/A(per policy) | S(request/admin) | - | - | - | R/Request*(policy) | R/Request*(policy) | R/Request*(policy) |
+| Alumni records (graduation-linked) — M4 closure | F | S | R | R | R(linked) | R(linked) | R | R | - | - | - | R(linked) | R(self, after linkage) | O(self) |
 | Finance (fees/invoices/payments/receipts) | F | S | R/A(policy) | - | - | - | - | R | F (post/reconcile; reverse/refund with A) | - | - | R/O(linked) pay/view* | R/O(self)* | - |
 | Inventory/Procurement/Assets (MVP basic assets) | F | S | A | S(dept) | R/request* | R/request* | - | - | S(cost/approve per policy) | - | - | - | - | - |
 | ID Cards | F | S | A | - | R | R | - | S(generate per policy) | - | S(staff cards) | - | R(own status*) | R(own status*) | - |
@@ -63,15 +64,16 @@ All require audit records; some require second approver per institution policy (
 - Exact per-verb grants per role, record-level predicates, and approval thresholds.
 - HoD/Exam Officer granular review powers per school policy.
 - Parent/student request rights for transcripts/certificates and payable actions.
-- **M3:** `academics`, `teaching`, `attendance`, and `employees` module grants are seeded in data; role names must be normalized to the matrix (`Principal/VP`/`HoD` vs current `Academic Head`/`Teacher`) before M3 acceptance.
-*Encode as configurable RBAC data and validate with negative authorization tests in each phase. Refinement does not block progression to Phase 2, but the M3 items above block M3 acceptance.*
+- **M3/M4:** `academics`, `teaching`, `attendance`, `employees`, `examinations`, `transcripts`, and `alumni` module grants are seeded in data. Canonical role names match the matrix, with backward-compatible aliases (`Academic Head` → `Head of Department`, `Teacher` → `Subject Teacher`, `Principal` → `Principal/Head Teacher`, `Principal/VP` → `Principal/Head Teacher` + `Vice Principal/Deputy Head`).
+*Encode as configurable RBAC data and validate with negative authorization tests in each phase. M3/M4 role-name alignment and negative/cross-scope tests are closed locally; formal UAT/sign-off and Q-003 remain before acceptance.*
 
 ## 8. Implemented M3 enforcement notes
 - `employees`: `view/create/update` for admins/Registrar/Academic Head; `delete_or_archive`/`export` admin-only.
 - `academics`: `view` for admins/Registrar/Academic Head/Teacher; `create/update` for admins/Registrar/Academic Head; `publish` for admins/Academic Head; `delete/export` admin-only.
 - `teaching`: `view` for admins/Registrar/Academic Head/Teacher; assignment mutations and `approve/publish` for admins/Academic Head.
 - `attendance`: `view/create` for admins/Registrar/Academic Head/Teacher; correction/`update`/`approve` for admins/Academic Head; `export` admin-only; `print` for admins/Registrar/Academic Head/Teacher.
-- Assignment/attendance service methods enforce assigned-class/subject scope, but cross-scope queryset filtering, API role/negative tests, and staff attendance remain open.
+- Object-level institution/campus/record queryset scoping is implemented for M3 APIs; teacher scope is enforced in services and querysets.
+- Role/negative and cross-scope/IDOR API tests cover M3 grants; workload policy, timetable recurrence/publish, and teacher attendance are implemented locally.
 
 ## 9. Implemented M4 backend enforcement notes
 - `examinations`: `view` for admins/Registrar/Academic Head/Teacher/Examination Officer/Principal-VP; `create/update/submit` for admins/Academic Head/Teacher/Examination Officer.
@@ -81,3 +83,4 @@ All require audit records; some require second approver per institution policy (
 - `transcripts`: `view/download/print` for admins/Registrar/Academic Head/Examination Officer/Principal-VP; `create` for admins/Registrar/Examination Officer; `update`/correction for admins/Registrar; `review` for admins/Academic Head/Examination Officer/Principal-VP; `approve` for admins/Examination Officer/Principal-VP; `issue_or_revoke` for admins/Registrar/Principal-VP; `delete_or_archive` admin-only.
 - Transcript services enforce institution/campus scope, deny request self-approval, require reasons for rejection/correction/revocation, and preserve prior versions/snapshots; public verification is hash-token-only and returns no student personal data.
 - Transcript API role/negative tests cover teacher denial and registrar request/generate/issue/download plus public verification; parent/student portal views remain unimplemented.
+- M4 closure adds object-level queryset scoping and cross-scope/IDOR tests, effective-dated grading policy, private PDF report-card download, and read-only graduation-linked alumni records via `/api/v1/alumni/records/`. These are validated locally, not accepted; Q-003 and UAT/sign-off remain.

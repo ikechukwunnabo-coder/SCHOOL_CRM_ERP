@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance entities and the M4 examinations/results/report-card/transcript entities are implemented as open hardening slices; remaining Phase 4+ entities are blueprint-only.
+**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance and M4 examinations/results/report-card/transcript/alumni entities are implemented locally with the listed hardening gaps closed. M3/M4 remain not accepted pending UAT/sign-off and Q-003; remaining Phase 4+ entities are blueprint-only.
 **Notation:** textual ER model (entities, key attributes, relationships). A visual diagram should be produced during implementation (e.g. dbdiagram/ERD tool) once reviewed.
 
 ## 1. Conventions
@@ -24,8 +24,8 @@
 - **Permission** (`id`, code, module/action/resource)
 - **RolePermission** (`role_id`, `permission_id`, scope rules)
 - **UserRole** (`user_id`, `role_id`, scope: institution/campus/class/subject/record/own, effective dates)
-- **AuditLog** (immutable: `id`, actor_user_id, action, target_type/id, institution_id, campus_id?, timestamp, reason?, change_summary/safe diff metadata)
-- Relationships: User N—M Role via UserRole; Role N—M Permission via RolePermission; actions produce AuditLog.
+- **AuditLog** (immutable: `id`, actor_user_id, action, target_type/id, institution_id, campus_id?, timestamp, reason?, change_summary/safe diff metadata, metadata, ip_address, `sequence_number`, `previous_hash`, `entry_hash`)
+- Relationships: User N—M Role via UserRole; Role N—M Permission via RolePermission; actions produce AuditLog. Per-scope sequence/hash chain is verified by `verify_audit_chain`; PostgreSQL triggers reject AuditLog UPDATE/DELETE.
 
 ### 2.3 People: Students, Guardians, Employees (Employees M3)
 - **Student** (`id`, institution_id, campus_id current, admission_number [unique scoped], internal_ref, biodata, photo, status/lifecycle_state, admission_date, current_enrolment refs)
@@ -53,32 +53,36 @@
 - **ClassEnrolment** (`id`, student_id, session_id, term_id?, class_level_id, arm_id, campus_id, status, effective dates) — historical
 - **Timetable** (`id`, scope session/term/class/arm, version/status)
 - **TimetableSlot** (`timetable_id`, day, period, subject_offering, room/venue?, employee?, teacher_assignment?)
-- **TeacherAssignment** (`id`, institution_id, campus_id, session_id, term_id?, class_level_id, arm_id, subject_id, employee_id/teacher, role [lead/assistant/substitute], workload/periods, effective_start/end, status, authorized_by)
-- Relationships: Session 1—N Term; ClassLevel 1—N Arm; SubjectOffering links Subject to Class/Arm/period; TeacherAssignment links Employee to Subject/Class/Arm (historical, auditable); draft/versioned timetable slots enforce add-time teacher/class/room conflict checks. Recurrence, publication policy, and configurable workload are still open.
+- **TeacherAssignment** (`id`, institution_id, campus_id, session_id, term_id?, class_level_id, arm_id, offering_id, employee_id/teacher, role [lead/assistant/substitute], workload_hours, start/end, status, authorized_by)
+- **TeacherWorkloadPolicy** (`id`, institution_id, campus_id?, name, effective_from/to, max_hours, is_active)
+- **Timetable** also carries `revision_of`, `approved_by/at`, `published_by/at`; **TimetableSlot** carries `recurrence`, `recurrence_interval`, `recurrence_until`.
+- Relationships: Session 1—N Term; ClassLevel 1—N Arm; SubjectOffering links Subject to Class/Arm/period; TeacherAssignment links Employee to Subject/Class/Arm (historical, auditable); workload is resolved from the effective institution-scoped policy; recurring timetable slots enforce add-time teacher/class/room conflict checks, with draft/approve/publish/revise versions.
 
-### 2.6 Attendance (M3 student slice implemented)
-- **AttendanceSession** (`id`, institution_id, campus_id, subject_offering, date, status, opened_by/closed_by/timestamps) — staff/period-level sessions not implemented
-- **AttendanceRecord** (`attendance_session_id`, student, status [present/absent/late/excused], marked_by, marked_at)
-- **AttendanceCorrection** (`attendance_record_id`, previous_status, new_status, reason, corrected_by, corrected_at)
-- Relationships: auditable corrections; summaries/exports and staff attendance remain planned.
+### 2.6 Attendance (M3 implemented locally)
+- **AttendanceSession** (`id`, institution_id, campus_id, subject_offering, date, status, opened_by/closed_by/timestamps) — period-level sessions remain planned
+- **AttendanceRecord** (`attendance_session_id`, student, status [present/absent/late/excused], marked_by, marked_at, correction_count)
+- **TeacherAttendanceRecord** (`id`, institution_id, campus_id, employee_id, attendance_date, status, approval_status, marked_by, approved_by/at)
+- **AttendanceCorrection** (`attendance_record_id`, previous_status, new_status, reason, requested_by, approved_by)
+- Relationships: auditable student corrections and teacher attendance marking/approval; summaries/exports remain planned.
 
-### 2.7 Examinations, Results, Report Cards (M4 backend slice implemented)
+### 2.7 Examinations, Results, Report Cards (M4 implemented locally)
 - **AssessmentScheme** (`id`, institution_id, level/scope, session/term, effective dates, grading config ref) — preserved historically
 - **AssessmentComponent** (`scheme_id`, type [CA/test/exam/etc], name, max_marks, weight, applicable scope)
 - **GradingScale** (`id`, institution_id, name, effective dates, boundaries/grade/description/remarks/gpa rules as configured)
+- **GradingPolicy** (`id`, institution_id, campus_id?, grading_scale_id, effective dates, result_completeness_rules, report_card_settings, is_active) — placeholder/default values pending Q-003
 - **ResultRecord** (`id`, student_id, subject_offering_id, session_id, term_id, component scores, total, grade, computed fields metadata, status [draft/submitted/returned/resubmitted/approved/published])
 - **ResultWorkflowAction** (`result_record_id` or batch, action, actor_id, timestamp, comments)
 - **ResultCorrection** (`result_record_id`, original_values, revised_values, reason, requester, reviewer, approver, timestamps, prior_version_ref)
-- **ReportCard** (`id`, student_id, session_id, term_id, generated_from published results snapshot/ref, template/version, status, file_ref, generated_at)
-- Relationships: ResultRecord unique per student/offering/scheme; ResultWorkflowAction records each transition; ResultCorrection preserves prior scores/total/grade with reason; only published results feed ReportCard and Transcript JSON snapshots; ranking, attempts, promotion, and report-card PDF file refs remain pending.
+- **ReportCard** (`id`, institution_id, campus_id?, student_id, session_id, term_id, reference, version, status, template_version, results_snapshot, document_snapshot, private `file`/file_ref, content_type, size_bytes, pdf_sha256, generated_by, published_at)
+- Relationships: ResultRecord unique per student/offering/scheme; ResultWorkflowAction records each transition; ResultCorrection preserves prior scores/total/grade with reason; only published results feed ReportCard and Transcript JSON snapshots; PDF report cards use private storage/hash with authenticated download. Ranking, attempts, and promotion policy remain pending institutional rule confirmation (Q-003).
 
-### 2.8 Transcripts & Alumni (M4 transcript backend slice implemented; alumni blueprint-only)
+### 2.8 Transcripts & Alumni (M4 implemented locally)
 - **TranscriptRequest** (`id`, institution_id, campus_id?, student_id, requested_by, purpose, requested_kind [provisional/official], status [requested/under_review/approved/rejected/generated/issued], decision_reason, reviewed_by/approved_by, reviewed_at/approved_at)
 - **Transcript** (`id`, institution_id, campus_id?, student_id, request_id, supersedes_id?, reference_number [unique per institution], version, kind [provisional/official], status [generated/issued/corrected/superseded/revoked], verification_token_hash [unique], verification_token_issued_at, verification_revoked_at, file/file_ref, content_type, size_bytes, pdf_sha256, template_version, issued_to, issue_purpose, issued_by/approved_by, issued_at, document_snapshot, results_snapshot, completeness)
 - **TranscriptEvent** (`request_id?`, `transcript_id?`, action, from_status, to_status, actor_id, reason)
 - **TranscriptVerification** (`transcript_id?`, token_hash, outcome [valid/invalid/revoked/superseded/invalid_state], checked_at)
-- **AlumniProfile** (`id`, student_id [unique link], alumni_number?, graduation_session/class, contact/career/engagement fields, privacy settings) — not implemented
-- Relationships: one `TranscriptRequest` may produce multiple versioned `Transcript` rows; `supersedes` links corrections to prior transcripts; transcript snapshots preserve published results and historical grading content; verification logs every token check; Student 1—0..1 AlumniProfile remains pending.
+- **AlumniRecord** (`id`, institution_id, campus_id?, student_id [unique link], graduation_event_id [unique link to StudentLifecycleEvent], graduation_date, graduation_reference) — implemented in `apps.alumni`
+- Relationships: one `TranscriptRequest` may produce multiple versioned `Transcript` rows; `supersedes` links corrections to prior transcripts; transcript snapshots preserve published results and historical grading content; verification logs every token check; graduation links Student 1—0..1 AlumniRecord. Full alumni engagement/profile/portal fields remain blueprint-only.
 
 ### 2.9 Finance (MVP)
 - **FeeCategory** (`id`, institution_id, name, type)
@@ -121,11 +125,11 @@
 - Historical/approved academic & financial records are immutable in effect (version/correct/reverse, never destructive overwrite/delete).
 - Official IDs (admission, employee, invoice, receipt, transcript ref, asset tag, PO/GRN/requisition numbers, etc.) unique per defined scope and immutable once issued except controlled correction.
 
-## 4. Implemented migration evidence (through M4 backend)
+## 4. Implemented migration evidence (through M4 closure)
 - M1: `accounts`, `institutions`, `permissions`, `audit`.
 - M2: `admissions`, `guardians`, `students`, `documents`, `imports`, identifier sequences/lifecycle history.
-- M3: `employees/0001_initial.py`, `academics/0001_initial.py`, `teaching/0001_initial.py`, `attendance/0001_initial.py`, and permission seed `permissions/0004_seed_phase3_permissions.py`.
-- M4: `examinations/0001_initial.py`, `transcripts/0001_initial.py`, permission seeds `permissions/0005_seed_phase4_permissions.py` and `permissions/0006_seed_phase4_transcript_permissions.py`.
-- Migration state validated with `manage.py makemigrations --check --dry-run` and `pytest -q` against PostgreSQL 18; M3/M4 remain open for schema refinements from workload/recurrence policy, report-card PDF/file refs, alumni linkage, and promotion/attempt rules.
+- M3: `employees/0001_initial.py`, `academics/0001_initial.py`, `teaching/0001_initial.py` + `teaching/0002_m3_workload_recurrence_publish.py`, `attendance/0001_initial.py` + `attendance/0002_m3_teacher_attendance.py`, permission seed `permissions/0004_seed_phase3_permissions.py`, and `permissions/0007_normalize_role_names.py`.
+- M4: `examinations/0001_initial.py` + `examinations/0002_m4_report_card_pdf_and_grading_policy.py`, `transcripts/0001_initial.py`, `alumni/0001_initial.py`, `audit/0002_auditlog_immutability_chain.py`, permission seeds `permissions/0005_seed_phase4_permissions.py`, `permissions/0006_seed_phase4_transcript_permissions.py`, and `permissions/0008_seed_alumni_permissions.py`.
+- Migration state validated locally with `python manage.py makemigrations --check --dry-run` and `pytest -q` (68 passed) against PostgreSQL 18. M3/M4 technical gaps are closed locally but formal acceptance awaits UAT/sign-off and Q-003; promotion/attempt rules remain pending institutional policy.
 
 *This ER model is a living blueprint refined with migrations; final schema/MRD continues to be validated during implementation.*

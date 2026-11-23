@@ -28,7 +28,8 @@ def test_user_has_active_role_and_role_names():
 
     assert user_has_active_role(user, "Teacher") is True
     assert user_has_active_role(user, "Admin") is False
-    assert get_user_role_names(user) == ["Teacher"]
+    assert get_user_role_names(user) == ["Subject Teacher"]
+
 
 
 @pytest.mark.django_db

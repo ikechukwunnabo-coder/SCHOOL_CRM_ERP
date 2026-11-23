@@ -10,6 +10,7 @@ from apps.audit.models import AuditLog
 from apps.employees.models import Employee
 from apps.institutions.models import Campus, Institution
 from apps.permissions.models import Role, UserRole
+from apps.permissions.roles import INSTITUTION_ADMIN, SUBJECT_TEACHER
 from apps.students.models import Student
 from apps.teaching import services as teaching_services
 from apps.teaching.models import TeacherAssignment
@@ -31,7 +32,7 @@ def setup_school(code="m3", teacher=True):
         institution=institution,
         campus=campus,
     )
-    admin_role = Role.objects.create(name="Institution Administrator", institution=institution)
+    admin_role = Role.objects.create(name=INSTITUTION_ADMIN, institution=institution)
     UserRole.objects.create(user=admin, role=admin_role)
     teacher_user = None
     teacher_employee = None
@@ -42,7 +43,7 @@ def setup_school(code="m3", teacher=True):
             institution=institution,
             campus=campus,
         )
-        teacher_role = Role.objects.create(name="Teacher", institution=institution)
+        teacher_role = Role.objects.create(name=SUBJECT_TEACHER, institution=institution)
         UserRole.objects.create(user=teacher_user, role=teacher_role)
         teacher_employee = Employee.objects.create(
             institution=institution,
@@ -250,7 +251,7 @@ def test_unassigned_teacher_cannot_open_attendance():
         institution=institution,
         campus=campus,
     )
-    role, _ = Role.objects.get_or_create(name="Teacher", institution=institution)
+    role, _ = Role.objects.get_or_create(name=SUBJECT_TEACHER, institution=institution)
     UserRole.objects.create(user=other_user, role=role)
 
     with pytest.raises(

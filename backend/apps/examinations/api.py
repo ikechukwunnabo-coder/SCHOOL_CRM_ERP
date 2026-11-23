@@ -1,6 +1,7 @@
+from django.http import FileResponse
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 
@@ -20,6 +21,7 @@ from . import services
 from .models import (
     AssessmentComponent,
     AssessmentScheme,
+    GradingPolicy,
     GradingScale,
     ReportCard,
     ResultRecord,
@@ -58,6 +60,16 @@ class ScopedViewSet(viewsets.ModelViewSet):
         "destroy": "delete_or_archive",
     }
     permission_classes = BASE
+    http_method_names = ["get", "post", "head", "options"]
+
+    def initial(self, request, *args, **kwargs):
+        if request.method in ("PUT", "PATCH", "DELETE") and self.action in {
+            "update",
+            "partial_update",
+            "destroy",
+        }:
+            raise MethodNotAllowed(request.method)
+        super().initial(request, *args, **kwargs)
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -75,6 +87,15 @@ class ScopedViewSet(viewsets.ModelViewSet):
         if isinstance(exc, ExaminationError):
             return super().handle_exception(ConflictError(detail=str(exc)))
         return super().handle_exception(exc)
+
+    def update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def destroy(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
 
 
 def _scoped_object(user, model, pk):
@@ -109,6 +130,11 @@ class GradingScaleViewSet(ScopedViewSet):
     serializer_class = serializer_for(GradingScale)
 
 
+class GradingPolicyViewSet(ScopedViewSet):
+    queryset = GradingPolicy.objects.select_related("grading_scale", "institution", "campus")
+    serializer_class = serializer_for(GradingPolicy)
+
+
 class ResultViewSet(ScopedViewSet):
     queryset = ResultRecord.objects.select_related(
         "student", "offering__subject", "scheme", "grading_scale", "session", "term"
@@ -122,6 +148,20 @@ class ResultViewSet(ScopedViewSet):
         "publish": "publish",
         "correct": "approve",
     }
+
+    def create(self, request, *args, **kwargs):
+        _required(request.data, "scheme", "offering", "student", "component_scores")
+        scheme = _scoped_object(request.user, AssessmentScheme, request.data["scheme"])
+        offering = _scoped_object(request.user, SubjectOffering, request.data["offering"])
+        student = _scoped_object(request.user, Student, request.data["student"])
+        result = services.record_result(
+            request.user,
+            scheme=scheme,
+            offering=offering,
+            student=student,
+            component_scores=request.data["component_scores"],
+        )
+        return Response(self.get_serializer(result).data, status=201)
 
     @action(detail=False, methods=["post"], url_path="submit")
     def submit_results(self, request):
@@ -171,7 +211,11 @@ class ReportCardViewSet(ScopedViewSet):
     verb_map = {
         **ScopedViewSet.verb_map,
         "generate": "create",
+        "download": "print",
     }
+
+    def create(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
 
     @action(detail=False, methods=["post"], url_path="generate")
     def generate(self, request):
@@ -188,3 +232,14 @@ class ReportCardViewSet(ScopedViewSet):
             term=term,
         )
         return Response(self.get_serializer(card).data)
+
+    @action(detail=True, methods=["get"])
+    def download(self, request, pk=None):
+        card = self.get_object()
+        file_handle = services.prepare_report_card_download(request.user, report_card=card)
+        return FileResponse(
+            file_handle.open("rb"),
+            as_attachment=True,
+            filename=f"{card.reference}-v{card.version}.pdf",
+            content_type="application/pdf",
+        )

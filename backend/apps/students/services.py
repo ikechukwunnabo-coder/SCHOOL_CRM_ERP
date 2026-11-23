@@ -54,7 +54,7 @@ def change_lifecycle(
         current = locked.status
         if target not in ALLOWED_TRANSITIONS.get(current, set()):
             raise StudentWorkflowError(f"invalid_transition:{current}->{target}")
-        StudentLifecycleEvent.objects.create(
+        event = StudentLifecycleEvent.objects.create(
             student=locked,
             from_status=current,
             to_status=target,
@@ -64,6 +64,13 @@ def change_lifecycle(
         )
         locked.status = target
         locked.save(update_fields=["status", "updated_at"])
+        if target == Status.GRADUATED:
+            try:
+                from apps.alumni.services import sync_alumni_record
+            except Exception:
+                sync_alumni_record = None
+            if sync_alumni_record is not None:
+                sync_alumni_record(actor=actor, student=locked, event=event)
         student.refresh_from_db()
     log_event(
         "students.lifecycle_changed",

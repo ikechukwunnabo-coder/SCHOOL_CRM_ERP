@@ -1,6 +1,6 @@
 # Data Dictionary
 
-**Status:** Living dictionary. M1/M2 fields, the M3 academic/teaching/attendance slice, and the M4 examinations/results/report-card/transcript backend entities are implemented in migrations; values below are representative, not exhaustive. Alumni and later entities remain blueprint-only.
+**Status:** Living dictionary. M1/M2 fields, M3 academic/teaching/attendance fields, and M4 examinations/results/report-card/transcript/alumni fields are implemented in migrations; values below are representative, not exhaustive. M3/M4 hardening is closed locally but not accepted pending UAT/sign-off and Q-003; later entities remain blueprint-only.
 
 ## 1. Conventions
 - **Types:** `uuid`, `string(n)`, `text`, `int`, `decimal(p,s)`, `bool`, `date`, `datetime(tz)`, `jsonb`, `enum`.
@@ -31,7 +31,9 @@
 |  | scope_ref_id | uuid | N | target of scope |
 | AuditLog | actor_user_id | uuid FK | N | system actions nullable with marker |
 |  | action, target_type, target_id | string/uuid | Y | immutable record |
-|  | change_summary | jsonb/text | N | safe, non-sensitive summary |
+|  | sequence_number, previous_hash, entry_hash | int/string(64)/string(64) | Y | per-scope hash chain; DB triggers reject update/delete; `verify_audit_chain` checks sequence and hashes |
+|  | created_at | datetime(tz) | Y | `editable=False`; stored in entry hash |
+|  | change_summary, metadata, ip_address | jsonb/jsonb/string | N | safe, non-sensitive summary and request metadata |
 
 ### Student / Guardian / Admissions
 | Entity | Field | Type | Req | Notes/Validation |
@@ -47,7 +49,7 @@
 |  | status | enum | Y | Enquiry→Submitted→…→Enrolled/Rejected/etc |
 |  | intended_class_id, intended_campus_id | uuid FK | Y | |
 
-### Academics / Teaching (M3 implemented slice)
+### Academics / Teaching (M3 implemented locally)
 | Entity | Field | Type | Req | Notes/Validation |
 |---|---|---|---|---|
 | AcademicSession | institution_id, code, name, start_date, end_date | uuid FK/string/date | Y | code unique per institution; end_date >= start_date; campus optional |
@@ -59,22 +61,24 @@
 | SubjectOffering | session_id, term_id, class_level_id, arm_id, subject_id | uuid FK | Y/N | unique scope; term/arm optional |
 |  | is_compulsory | bool | Y | offering flag |
 | ClassEnrolment | session_id, student_id, class_level_id, arm_id, status | uuid FK/enum | Y/N | unique session+student; status active/completed/withdrawn |
+| TeacherWorkloadPolicy | institution_id, campus_id?, name, effective_from/to, max_hours, is_active | uuid FK/string/date/int/bool | Y/N | institution-scoped configurable cap (no hard-coded 40-hour limit); effective-dated |
 | TeacherAssignment | institution_id, campus_id, session_id, term_id, class_level_id, arm_id, offering_id, employee_id | uuid FK | Y/N | effective-dated allocation |
 |  | role, status | enum | Y | lead/assistant/substitute; active/closed |
 |  | start_date, end_date | date | Y | history preserved on reassignment |
-|  | workload_hours | int | Y | default 0; service currently enforces a hard-coded 40-hour cap (make configurable) |
-| Timetable | session_id, class_level_id, arm_id, name, version, status | uuid FK/string/int/enum | Y | draft/published; version unique per scope |
-| TimetableSlot | timetable_id, day_of_week, period, offering_id, employee_id, room | uuid FK/int/string | Y | add-time conflict checks; one slot per day/period per timetable |
+|  | workload_hours | int | Y | default 0; validated against the effective TeacherWorkloadPolicy |
+| Timetable | session_id, class_level_id, arm_id, revision_of, name, version, status, approved_by/at, published_by/at | uuid FK/string/int/enum/datetime | Y/N | draft/approved/published; revisions and versions preserved |
+| TimetableSlot | timetable_id, day_of_week, period, offering_id, employee_id, room, recurrence, recurrence_interval, recurrence_until | uuid FK/int/string/date | Y/N | add-time conflict checks; recurrence rule/interval/end date; one slot per day/period per timetable |
 
-### Attendance (M3 implemented student slice)
+### Attendance (M3 implemented locally)
 | Entity | Field | Type | Req | Notes/Validation |
 |---|---|---|---|---|
 | AttendanceSession | institution_id, campus_id, session_id, term_id, class_level_id, arm_id, offering_id, attendance_date | uuid FK/date | Y/N | unique offering+date; student/subject-offering based |
-|  | status, closed_by | enum/uuid FK | Y/N | open/closed; staff/period sessions not implemented |
+|  | status, closed_by | enum/uuid FK | Y/N | open/closed; period-level sessions not implemented |
 | AttendanceRecord | attendance_session_id, student_id, status, marked_by, marked_at, correction_count | uuid FK/enum/datetime/int | Y | unique session+student; present/absent/late/excused |
+| TeacherAttendanceRecord | institution_id, campus_id, employee_id, attendance_date, status, approval_status, marked_by, approved_by, approved_at | uuid FK/date/enum/uuid FK/datetime | Y/N | teacher attendance marking and approval; scoped querysets |
 | AttendanceCorrection | record_id, previous_status, new_status, reason, requested_by, approved_by | uuid FK/enum/text/uuid FK | Y | mandatory reason; privileged approval; application-level audit |
 
-### Examinations / Results / Transcripts (M4 backend slice implemented)
+### Examinations / Results / Transcripts / Alumni (M4 implemented locally)
 | Entity | Field | Type | Req | Notes/Validation |
 |---|---|---|---|---|
 | AssessmentScheme | institution_id, session_id, class_level_id, code, effective_from | uuid FK/string/date | Y | campus/term/arm optional; code unique per institution; effective_to >= effective_from |
@@ -82,11 +86,14 @@
 |  | weight | decimal(5,2) | Y | > 0 and <= 100; scheme weights must total 100 |
 | GradingScale | effective_from/to | date | Y/N | code unique per institution; grade ranges non-overlapping; pass_mark must fall in a range |
 |  | grades | jsonb | Y | min/max/grade/remark entries; service-selected effective scale stored on each result |
+| GradingPolicy | institution_id, campus_id?, grading_scale_id, name, code, effective_from/to, is_active | uuid FK/string/date/bool | Y/N | effective-dated policy; code unique per institution; placeholder/default values pending Q-003 |
+|  | result_completeness_rules, report_card_settings | jsonb/jsonb | N | configurable completeness and report-card options |
 | ResultRecord | student_id, offering_id, scheme_id, grading_scale_id, session_id, term_id | uuid FK | Y/N | **unique student+offering+scheme**; grading scale preserved at entry time |
 |  | component_scores, total_score, grade, remark | jsonb/decimal/string | Y/N | weighted total computed by controlled service; scores must be within component max marks |
 |  | status | enum | Y | draft→submitted→returned→submitted→approved→published; self-approval denied |
 | ResultCorrection | previous_scores, revised_scores, previous_total, revised_total, previous_grade, revised_grade, reason | jsonb/decimal/string/text | Y | mandatory reason; prior values preserved; result returns to submitted for re-approval |
-| ReportCard | reference, version, results_snapshot, template_version | string/int/jsonb/string | Y | unique institution+reference; snapshots generated only from published results |
+| ReportCard | reference, version, status, template_version, results_snapshot, document_snapshot, published_at | string/int/enum/string/jsonb/jsonb/datetime | Y | unique institution+reference; snapshots generated only from published results |
+|  | file, file_ref, content_type, size_bytes, pdf_sha256, generated_by | file/string/string/int/string(64)/uuid FK | N/Y | generated PDF in private storage; hash and metadata for integrity; authenticated download |
 | TranscriptRequest | institution_id, campus_id, student_id, requested_by | uuid FK | Y/N | institution/campus scope; `requested_by` nullable on user deletion |
 |  | purpose, requested_kind, status | text/enum/enum | Y | requested/under_review/approved/rejected/generated/issued; provisional/official |
 |  | decision_reason, reviewed_at, approved_at | text/datetime | N | review/approval metadata; self-approval denied in service |
@@ -99,6 +106,7 @@
 |  | document_snapshot, results_snapshot, completeness | jsonb/jsonb/jsonb | Y | immutable-style snapshots of institution/student/results/grading/completeness at generation time |
 | TranscriptEvent | request_id/transcript_id, action, from_status, to_status, actor_id, reason | uuid FK/string/enum/uuid FK/text | Y/N | audit trail for request/generate/issue/correct/revoke/verify |
 | TranscriptVerification | transcript_id, token_hash, outcome, checked_at | uuid FK/string/enum/datetime | N/Y | outcomes: valid/invalid/revoked/superseded/invalid_state; public response excludes student data |
+| AlumniRecord | institution_id, campus_id?, student_id, graduation_event_id, graduation_date, graduation_reference | uuid FK/date/string | Y/N | unique institution+student; graduation linked to StudentLifecycleEvent; read-only `/api/v1/alumni/records/` |
 
 ### Finance
 | Entity | Field | Type | Req | Notes/Validation |
@@ -140,4 +148,4 @@
 - Preserve history: lifecycle events, allocations, attendance corrections, result corrections/versions, transcript issues, asset custody, financial adjustments.
 - Separate public CMS fields/media from confidential ERP records and private documents.
 
-*Expand this dictionary per entity/table as migrations evolve; M3 refinements (workload/recurrence/staff attendance) and M4 refinements (attempts/ranking/promotion, report-card PDF/file refs, alumni linkage) remain open.*
+*Expand this dictionary per entity/table as migrations evolve; M3 refinements (workload/recurrence/teacher attendance) and M4 refinements (grading policy, report-card PDF/file refs, alumni linkage) are implemented locally. Formal M3/M4 acceptance awaits UAT/sign-off and Q-003; attempts/ranking/promotion rules remain pending institutional policy.*

@@ -1,6 +1,6 @@
 # Test Strategy
 
-**Status:** Living strategy. Testing is mandatory; M3 (29 tests), M4 examinations (5 tests), and transcript (5 tests) backend slices have local evidence, but M3/M4 acceptance still requires broader API role/negative, frontend, and E2E coverage.
+**Status:** Living strategy. Testing is mandatory; the M3/M4 closure has local evidence of 68 backend tests, 17 Vitest tests, and 2 mocked Playwright specs. M3/M4 remain not accepted pending formal UAT/sign-off and Q-003; remote CI evidence for the uncommitted closure is pending.
 
 ## 1. Objectives & Quality Gates
 - Verify correctness of business rules, workflows, calculations, and data integrity.
@@ -17,7 +17,7 @@
 - **Permission & scope tests:** role/scope matrix enforcement, object-level/IDOR cases, cross-institution and cross-campus denial, unauthenticated access.
 - **Data integrity tests:** DB constraints (unique FKs/checks), transactional atomicity, concurrency-sensitive operations (e.g. stock issuance, payment posting).
 - **Integration tests:** module interactions (admissions→student→enrolment, academics→teaching→attendance, teaching→results→report/transcript, PO→GRN→stock/asset, payment verify→receipt/balance).
-- **Current backend evidence (M4 transcript slice):** `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**39 passed**) against PostgreSQL 18; migration application verified in test DB. M4 examinations tests cover assessment configuration, weighted scoring/grading, full result workflow, report-card snapshots, self-approval denial, unassigned-teacher denial, correction history, and API role/negative approval/publication checks. Transcript tests cover snapshot immutability under later grading-scale edits, private PDF generation, incomplete-record official blocking, issue/download permissions, public verification of valid/invalid/superseded/revoked states, and correction version chain. M4 examinations commit `3f04813` passed remote CI `45135466158`; transcript commit `a603498` passed remote CI `45149166162`. M3 acceptance still needs broader API role/negative tests, and M4 frontend/E2E and report-card PDF tests remain open.
+- **Current backend evidence (M3/M4 closure):** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` -> **68 passed** against PostgreSQL 18; `python manage.py verify_audit_chain` -> valid. Coverage includes object-level scoped querysets, canonical-role and negative API tests, cross-scope/IDOR denial, configurable workload policy, timetable recurrence/publish, teacher attendance, audit-chain immutability/hash verification, PDF report cards with private storage/hash/snapshot/download, effective-dated grading policy, and graduation→alumni linkage. Historical slices were 29 M3 tests, 5 M4 examinations tests and 5 transcript tests with earlier green CI runs; the closure code is not committed or pushed, so no remote CI run ID exists for this evidence.
 
 ### 2.2 Frontend (Vitest/React Testing Library as chosen)
 - Component/unit tests for critical UI logic and rendering states.
@@ -25,6 +25,7 @@
 - Routing/protected-route and role-based UI visibility (non-authoritative) tests.
 - API client/error/loading/empty-state handling.
 - Accessibility checks (automated tooling e.g. axe where integrated) for key screens/components.
+- **Local evidence:** `npm run lint` pass, `npm test` -> **17 Vitest tests passed** covering M3/M4 pages, permissions and API resources, and `npm run build` pass.
 
 ### 2.3 End-to-End (Playwright or equivalent)
 Critical journeys (per Master Spec): 
@@ -43,6 +44,8 @@ Critical journeys (per Master Spec):
 
 Additional E2E as implemented: ID card generate/verify/revoke, inventory receive/issue/adjust (no unapproved negative), procurement receive routing to stock vs asset.
 
+**Local evidence:** 2 mocked Playwright specs (`m3-workflow.spec.ts`, `m4-workflow.spec.ts`) pass via `npm run test:e2e`; they are mocked UI/workflow coverage, not live-integration or UAT evidence.
+
 ### 2.4 Non-Functional & Specialized
 - **Performance/load (planned):** validate initial targets (response times, ~100 concurrent users, report times) against agreed infra/data; async behavior for bulk jobs.
 - **Security checks:** dependency/vulnerability scans, basic SAST/config checks in CI; focused tests for CSRF/auth/session handling per chosen auth (D-011).
@@ -56,7 +59,7 @@ Additional E2E as implemented: ID card generate/verify/revoke, inventory receive
 
 ## 4. CI/CD Integration
 - On PR/commit: lint/format, type checks (backend/frontend), unit/integration tests, build verification.
-- E2E: run in CI on staging-like environment or nightly/per-release suite as feasible.
+- E2E: CI now runs frontend lint and Playwright E2E in addition to backend checks, including `verify_audit_chain`; local closure evidence is green, but the code is not committed or pushed and there is no remote CI run ID yet.
 - Fail pipeline on test failures, critical lint/type errors, or coverage drop below agreed threshold for critical modules (once established).
 - Publish test reports and artifacts (e.g. coverage, Playwright traces/screenshots on failure).
 
@@ -70,4 +73,4 @@ Additional E2E as implemented: ID card generate/verify/revoke, inventory receive
 - QA/acceptance: UAT scenarios aligned to acceptance criteria before release sign-off.
 - **No "complete" claim** without passing relevant automated tests and documented evidence.
 
-*Tooling choices (pytest plugins, coverage tools, Vitest config, Playwright) to be finalized in Technology Compatibility/implementation setup and recorded in CI config.*
+*Tooling is implemented in the local setup (pytest, Vitest, React Testing Library, Playwright, ESLint) and recorded in CI config; coverage thresholds and staging-like E2E environments remain to be finalized.*

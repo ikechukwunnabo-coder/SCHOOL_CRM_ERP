@@ -1,24 +1,40 @@
 from django.db import transaction
+from django.utils import timezone
 
 from apps.academics.models import ClassEnrolment
 from apps.audit.services import log_event
-from apps.permissions.services import get_user_role_names
+from apps.employees.models import Employee
+from apps.permissions.roles import (
+    ADMIN_ROLES,
+    HR_OFFICER,
+    LEADERSHIP_ROLES,
+    REGISTRAR,
+    TEACHING_ROLES,
+    role_matches,
+)
+from apps.permissions.services import (
+    get_user_role_names,
+    user_can_access_campus_id,
+    user_can_access_institution,
+)
 from apps.teaching.services import resolve_teacher_scope
 
-from .models import AttendanceCorrection, AttendanceRecord, AttendanceSession
+from .models import (
+    AttendanceCorrection,
+    AttendanceRecord,
+    AttendanceSession,
+    TeacherAttendanceRecord,
+)
 
 
 class AttendanceError(ValueError):
     pass
 
 
-PRIVILEGED_ROLES = {
-    "Super Administrator",
-    "Institution Administrator",
-    "Registrar/Admissions",
-    "Academic Head",
-    "Principal",
-}
+PRIVILEGED_ROLES = frozenset((*ADMIN_ROLES, *LEADERSHIP_ROLES, REGISTRAR))
+TEACHER_ROLES = frozenset(TEACHING_ROLES)
+APPROVER_ROLES = frozenset((*ADMIN_ROLES, *LEADERSHIP_ROLES, REGISTRAR, HR_OFFICER))
+MARKER_ROLES = frozenset((*PRIVILEGED_ROLES, *TEACHER_ROLES, HR_OFFICER))
 
 
 def _audit(actor, action, obj, **kwargs):
@@ -33,13 +49,27 @@ def _audit(actor, action, obj, **kwargs):
     )
 
 
+def _pk(value):
+    return getattr(value, "pk", value)
+
+
+def ensure_scope(user, institution_id, campus_id=None):
+    if getattr(user, "is_superuser", False):
+        return
+    if not user_can_access_institution(user, _pk(institution_id)):
+        raise AttendanceError("cross_institution_attendance")
+    if not user_can_access_campus_id(user, _pk(campus_id)):
+        raise AttendanceError("cross_campus_attendance")
+
+
 def ensure_teacher_scope(user, offering):
+    ensure_scope(user, offering.institution_id, offering.campus_id)
     if user.is_superuser:
         return
     roles = set(get_user_role_names(user))
     if roles & PRIVILEGED_ROLES:
         return
-    if "Teacher" not in roles:
+    if not roles & TEACHER_ROLES:
         raise AttendanceError("missing_teacher_scope")
     assignments = resolve_teacher_scope(user)
     if not any(
@@ -119,13 +149,14 @@ def close_session(actor, attendance):
 
 
 def correct_attendance(actor, *, record, new_status, reason):
+    ensure_scope(actor, record.institution_id, record.campus_id)
     if not reason.strip():
         raise AttendanceError("correction_reason_required")
     if new_status not in AttendanceRecord.Status.values:
         raise AttendanceError("invalid_attendance_status")
-    if actor.is_superuser or set(get_user_role_names(actor)) & PRIVILEGED_ROLES:
-        pass
-    else:
+    if not (
+        actor.is_superuser or role_matches(get_user_role_names(actor), PRIVILEGED_ROLES)
+    ):
         raise AttendanceError("correction_not_permitted")
     with transaction.atomic():
         locked = AttendanceRecord.objects.select_for_update().get(pk=record.pk)
@@ -147,3 +178,89 @@ def correct_attendance(actor, *, record, new_status, reason):
         change_summary={"from": correction.previous_status, "to": correction.new_status},
     )
     return correction
+
+
+def mark_teacher_attendance(actor, *, employee, attendance_date, status):
+    ensure_scope(actor, employee.institution_id, employee.campus_id)
+    if not (
+        actor.is_superuser or role_matches(get_user_role_names(actor), MARKER_ROLES)
+    ):
+        raise AttendanceError("teacher_attendance_mark_not_permitted")
+    if status not in AttendanceRecord.Status.values:
+        raise AttendanceError("invalid_attendance_status")
+    with transaction.atomic():
+        existing = (
+            TeacherAttendanceRecord.objects.select_for_update()
+            .filter(employee=employee, attendance_date=attendance_date)
+            .first()
+        )
+        if existing and existing.approval_status == TeacherAttendanceRecord.ApprovalStatus.APPROVED:
+            raise AttendanceError("approved_teacher_attendance_locked")
+        record, _ = TeacherAttendanceRecord.objects.update_or_create(
+            employee=employee,
+            attendance_date=attendance_date,
+            defaults={
+                "institution_id": employee.institution_id,
+                "campus_id": employee.campus_id,
+                "status": status,
+                "approval_status": TeacherAttendanceRecord.ApprovalStatus.DRAFT,
+                "marked_by": actor,
+                "approved_by": None,
+                "approved_at": None,
+            },
+        )
+    _audit(actor, "attendance.teacher_marked", record, change_summary={"status": status})
+    return record
+
+
+def ensure_teacher_attendance_editable(record):
+    if record.approval_status == TeacherAttendanceRecord.ApprovalStatus.APPROVED:
+        raise AttendanceError("approved_teacher_attendance_locked")
+
+
+def approve_teacher_attendance(actor, record):
+    ensure_scope(actor, record.institution_id, record.campus_id)
+    if not (
+        actor.is_superuser or role_matches(get_user_role_names(actor), APPROVER_ROLES)
+    ):
+        raise AttendanceError("teacher_attendance_approval_not_permitted")
+    with transaction.atomic():
+        locked = TeacherAttendanceRecord.objects.select_for_update().get(pk=record.pk)
+        if locked.approval_status == TeacherAttendanceRecord.ApprovalStatus.APPROVED:
+            raise AttendanceError("teacher_attendance_already_approved")
+        locked.approval_status = TeacherAttendanceRecord.ApprovalStatus.APPROVED
+        locked.approved_by = actor
+        locked.approved_at = timezone.now()
+        locked.save(
+            update_fields=["approval_status", "approved_by", "approved_at", "updated_at"]
+        )
+    _audit(actor, "attendance.teacher_approved", locked)
+    return locked
+
+
+def query_teacher_attendance(user, *, employee=None, date_from=None, date_to=None, status=None):
+    if employee is not None:
+        ensure_scope(user, employee.institution_id, employee.campus_id)
+    qs = TeacherAttendanceRecord.objects.all()
+    if not user.is_superuser:
+        qs = qs.filter(institution_id=user.institution_id)
+        if user.campus_id:
+            qs = qs.filter(campus_id=user.campus_id)
+    if employee is not None:
+        qs = qs.filter(employee_id=_pk(employee))
+    if date_from is not None:
+        qs = qs.filter(attendance_date__gte=date_from)
+    if date_to is not None:
+        qs = qs.filter(attendance_date__lte=date_to)
+    if status is not None:
+        qs = qs.filter(status=status)
+    return qs.select_related("employee", "marked_by", "approved_by")
+
+
+def scoped_employee(user, employee_id):
+    qs = Employee.objects.all()
+    if not user.is_superuser:
+        qs = qs.filter(institution_id=user.institution_id)
+        if user.campus_id:
+            qs = qs.filter(campus_id=user.campus_id)
+    return qs.filter(pk=employee_id).first()

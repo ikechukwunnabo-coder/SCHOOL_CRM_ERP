@@ -5,6 +5,7 @@ from django.db.models import Q
 from apps.institutions.models import Campus
 
 from .models import Permission
+from .roles import normalize_role_names
 
 
 def _is_privileged(user) -> bool:
@@ -15,9 +16,10 @@ def user_has_active_role(user, role_name: str | None = None, *, institution_id=N
     """Check whether the user holds an active role, optionally scoped to an institution."""
     if not user or not getattr(user, "is_authenticated", False):
         return False
-    qs = user.user_roles.filter(is_active=True)
+    qs = user.user_roles.filter(is_active=True).select_related("role")
     if role_name:
-        qs = qs.filter(role__name=role_name)
+        expected = normalize_role_names([role_name]) | {role_name}
+        qs = qs.filter(role__name__in=expected)
     if institution_id is not None:
         qs = qs.filter(role__institution_id=institution_id)
     return qs.exists()
@@ -55,12 +57,13 @@ def user_has_active_role_for_institution(user, institution_id) -> bool:
 def get_user_role_names(user) -> list[str]:
     if not user or not getattr(user, "is_authenticated", False):
         return []
-    return list(
+    held = (
         user.user_roles.filter(is_active=True)
         .select_related("role")
         .values_list("role__name", flat=True)
         .distinct()
     )
+    return sorted(normalize_role_names(held))
 
 
 def user_has_module_permission(user, module: str, verb: str, *, resource: str = "*") -> bool:
@@ -79,10 +82,10 @@ def user_has_module_permission(user, module: str, verb: str, *, resource: str = 
         .prefetch_related("role_grants__role")
     )
     for permission in permissions:
-        if set(permission.allowed_role_names) & held:
+        if normalize_role_names(permission.allowed_role_names) & held:
             return True
         if any(
-            grant.allowed and grant.role.name in held
+            grant.allowed and grant.role.name in normalize_role_names(held)
             for grant in permission.role_grants.all()
         ):
             return True

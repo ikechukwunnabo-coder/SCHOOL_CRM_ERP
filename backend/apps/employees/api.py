@@ -1,4 +1,5 @@
 from rest_framework import serializers, viewsets
+from rest_framework.exceptions import PermissionDenied
 
 from apps.permissions.permissions import (
     HasActiveInstitutionRole,
@@ -8,6 +9,7 @@ from apps.permissions.permissions import (
     IsCampusScoped,
     IsInstitutionScoped,
 )
+from apps.permissions.services import user_can_access_campus_id, user_can_access_institution
 
 from .models import Employee
 
@@ -50,3 +52,27 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if user.campus_id:
             qs = qs.filter(campus_id=user.campus_id)
         return qs
+
+    def _ensure_scope(self, obj):
+        user = self.request.user
+        if user.is_superuser:
+            return
+        if not user_can_access_institution(user, getattr(obj, "institution_id", None)):
+            raise PermissionDenied("Outside institution scope.")
+        if not user_can_access_campus_id(user, getattr(obj, "campus_id", None)):
+            raise PermissionDenied("Outside campus scope.")
+
+    def _candidate(self, serializer):
+        if serializer.instance is None:
+            return Employee(**serializer.validated_data)
+        for field, value in serializer.validated_data.items():
+            setattr(serializer.instance, field, value)
+        return serializer.instance
+
+    def perform_create(self, serializer):
+        self._ensure_scope(self._candidate(serializer))
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self._ensure_scope(self._candidate(serializer))
+        serializer.save()

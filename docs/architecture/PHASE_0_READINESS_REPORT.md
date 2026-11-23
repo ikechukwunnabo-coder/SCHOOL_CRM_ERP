@@ -5,7 +5,7 @@
 **Authoritative spec:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md` (1,828 lines)  
 **Phase reference:** `# PHASE 0.md`
 
-> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1/M1 is accepted, Phase 2/M2 is closed, and the Phase 3/M3 academic/teaching and Phase 4/M4 examinations/transcript backend slices are implemented but not accepted. See `README.md`, `IMPLEMENTATION_ROADMAP.md`, `DECISIONS_REGISTER.md` (D-026–D-030), and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
+> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1/M1 is accepted, Phase 2/M2 is closed, and the Phase 3/M3 academic/teaching and Phase 4/M4 examinations/transcript backend slices are implemented but not accepted. See `README.md`, `IMPLEMENTATION_ROADMAP.md`, `DECISIONS_REGISTER.md` (D-026–D-031), and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
 
 ## 1. Executive Summary
 Phase 0 discovery artifacts have been drafted to translate the master specification into an implementation-ready blueprint. Core architecture, domain boundaries, ERD/data dictionary, RBAC, workflows, API conventions, and plans for technology, integrations, security, testing, deployment, and roadmap are documented. However, multiple material decisions require verification/approval and external inputs (versions, auth finalization, providers/credentials, infra, school-specific rules). **Recommendation: CONDITIONAL GO** for Release 1 development, contingent on resolving/approving the gating items in §4 and §6.
@@ -18,15 +18,15 @@ Phase 0 discovery artifacts have been drafted to translate the master specificat
 | 2 | System Architecture | `docs/architecture/SYSTEM_ARCHITECTURE.md` | Living (M1–M4 backend modules documented) |
 | 3 | Entity Relationship Diagram | `docs/architecture/ENTITY_RELATIONSHIP_DIAGRAM.md` | Living (M1–M4 backend entities implemented; later entities planned) |
 | 4 | Data Dictionary | `docs/architecture/DATA_DICTIONARY.md` | Living (M1–M4 backend fields representative; later entities planned) |
-| 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (D-026); M1–M4 backend enforcement documented, M3/M4 gaps open |
-| 6 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Living (M1–M2 implemented; M3/M4 backend slices open; later phases planned) |
+| 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (D-026); M1–M4 backend enforcement documented with M3/M4 hardening closed locally |
+| 6 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Living (M1–M2 implemented; M3/M4 workflows implemented locally; later phases planned) |
 | 7 | API Design | `docs/architecture/API_DESIGN.md` | Living (M1–M4 backend endpoints concrete; later phases illustrative) |
-| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Validated through M4 backend locally (39 tests); committed pins green in remote CI (`45135466158`) |
+| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Historical pins green in remote CI (`45135466158`); M3/M4 closure locally validated (68 backend tests, 17 Vitest tests, 2 mocked Playwright specs), remote CI pending commit/push |
 | 9 | Integration Specifications | `docs/architecture/INTEGRATION_SPECIFICATIONS.md` | Documented; provider integrations pending |
-| 10 | Security & Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Living (M1–M4 backend controls partial; production controls pending) |
-| 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Living (39 backend tests through transcript slice locally; API/E2E gaps open) |
+| 10 | Security & Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Living (M1–M4 controls implemented locally incl. object-level scoping and tamper-evident audit chain; production controls pending) |
+| 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Living (M3/M4 closure local evidence: 68 backend tests, 17 Vitest tests, 2 mocked Playwright specs) |
 | 12 | Deployment & Operations Plan | `docs/architecture/DEPLOYMENT_AND_OPERATIONS_PLAN.md` | Documented; runtime/production validation pending |
-| 13 | Implementation Roadmap | `docs/architecture/IMPLEMENTATION_ROADMAP.md` | Living (M3/M4 backend implemented, not accepted) |
+| 13 | Implementation Roadmap | `docs/architecture/IMPLEMENTATION_ROADMAP.md` | Living (M3/M4 hardening implemented locally, not accepted pending UAT/sign-off and Q-003) |
 
 Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 
@@ -55,12 +55,12 @@ Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 | Institution/campus access enforced server-side | **Implemented in slices** | Required in all access paths; M1–M4 services/views enforce institution context, with broader negative tests still mandated |
 | Stable student/employee identities across lifecycle | **Implemented in slices** | M2 admissions→student conversion and M3 employees implemented; alumni linkage remains pending |
 | Historical academic results & grading schemes preserved | **Implemented in slices** | M4 effective-dated grading scales, stored scale selection, correction history, published report-card snapshots, and cumulative transcript snapshots with hash-token verification/versioning |
-| Subject-teacher allocations with effective dates & audit history | **Implemented in M3 slice** | Effective-dated assignments with reassignment history; configurable workload, recurrence/publication, and teacher attendance remain open |
+| Subject-teacher allocations with effective dates & audit history | **Implemented in M3 closure** | Effective-dated assignments with reassignment history, configurable workload policy, timetable recurrence/publication, and teacher attendance |
 | Traceable financial posting/reversal/reconciliation | **Specified** | No posted-txn deletion, server-verified/idempotent payments; **not implemented** |
 | Clear inventory/procurement/asset/finance boundaries | **Specified** | Distinct modules + integration/traceability rules; **not implemented** |
 | Student/staff ID cards from existing biodata, secure verification | **Specified** | Lifecycle, non-guessable token QR; **not implemented** |
 | Public CMS isolated from private ERP records | **Specified** | Published-only/public endpoints whitelisted; **not implemented** |
-| Sensitive operations authorized & audited | **Specified / baseline approved** | RBAC scopes + audit events approved as MVP baseline (D-026); M1–M4 application-level enforcement/audit implemented; DB-level immutability and broader negative tests pending |
+| Sensitive operations authorized & audited | **Implemented locally** | RBAC scopes + audit events per D-026; object-level queryset scoping, negative/IDOR tests, and DB-level immutable/tamper-evident audit chain implemented; formal UAT/sign-off pending |
 
 ## 5. Risks & Dependencies
 
@@ -99,8 +99,8 @@ Per `IMPLEMENTATION_ROADMAP.md`: **Phase 0 (done: documented)** → Phase 1 Foun
 
 ## 9. Honest Status Statement
 - **Documented:** Phase 0 deliverables (13) and readiness report drafted in `docs/architecture/`, with current status notes added as implementation progressed.
-- **Approved:** Baseline decisions D-001–D-021 documented; D-010 validated; D-026 RBAC baseline approved; D-027 Phase 2/M2 closed; D-028/D-029/D-030 record M3/M4 backend slices as implemented but not accepted.
-- **Implemented:** M1 foundation, M2 student/admissions vertical slice, M3 academic/teaching/attendance slice, and M4 examinations/results/report-card/transcript backend slices. M3/M4 remain open for hardening and missing workflows.
-- **Tested:** 39 backend tests pass locally and in CI against PostgreSQL 18 (34 through M4 examinations, plus 5 transcript tests); transcript CI green (`45149166162`), M4 remote CI green (`45135466158`), and M3 remote CI green (`45130273958`). Frontend build green; E2E and production runtime validation remain open.
+- **Approved:** Baseline decisions D-001–D-021 documented; D-010 validated; D-026 RBAC baseline approved; D-027 Phase 2/M2 closed; D-028/D-029/D-030 record M3/M4 implemented locally; D-031 records closure of the listed hardening gaps.
+- **Implemented:** M1 foundation, M2 student/admissions vertical slice, M3 academic/teaching/attendance hardening, M4 examinations/results/report-card/transcript/alumni hardening, DB-level tamper-evident audit chain, and frontend M3/M4 workflows. M3/M4 remain not accepted pending UAT/sign-off and Q-003.
+- **Tested:** Local closure evidence: 68 backend tests pass against PostgreSQL 18, `verify_audit_chain` valid, 17 Vitest tests and 2 mocked Playwright specs pass, lint/build green. Historical remote CI was green through the transcript slice (`45149166162`); closure remote CI is pending commit/push. Production runtime validation remains open.
 
-*Next action:* complete M3/M4 hardening and remaining Phase 4 workflows, then obtain approval at the appropriate milestone gates; keep unresolved provider, school-policy, and infra decisions tracked in `DECISIONS_REGISTER.md`.
+*Next action:* commit/push the closure, verify remote CI, then obtain UAT/sign-off and Q-003 confirmation at the appropriate milestone gates; keep unresolved provider, school-policy, and infra decisions tracked in `DECISIONS_REGISTER.md`.

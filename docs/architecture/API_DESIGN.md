@@ -1,6 +1,6 @@
 # API Design
 
-**Status:** Living API design. M1–M3 endpoints and the M4 examinations/transcript backend endpoints are implemented and CI-verified (`45149166162` for transcript endpoints). Remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are implemented but not accepted.
+**Status:** Living API design. M1–M4 endpoints, including M3/M4 hardening endpoints, are implemented locally; historical CI was green through the transcript slice (`45149166162`). The closure code is not committed or pushed, so remote CI evidence for it is pending and no run ID exists. Remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are not accepted pending UAT/sign-off and Q-003.
 **Style:** RESTful JSON APIs (Django REST Framework), versioned, with generated schema at `/api/schema/` and Swagger UI at `/api/docs/`.
 
 ## 1. Conventions
@@ -64,13 +64,14 @@
 | Admissions/students/imports | `/api/v1/admissions/...`, `/api/v1/students/...`, `/api/v1/imports/...` | M2 workflow and controlled import endpoints |
 | Employees | `/api/v1/employees/` | M3 employee records |
 | Academics | `/api/v1/academic-sessions/`, `/api/v1/terms/`, `/api/v1/class-levels/`, `/api/v1/arms/`, `/api/v1/subjects/`, `/api/v1/subject-offerings/`, `/api/v1/class-enrolments/` | M3 structure; standard router CRUD |
-| Teaching | `/api/v1/teacher-assignments/`, `/api/v1/teacher-assignments/my-assignments/`, `/api/v1/teacher-assignments/{id}/reassign/`, `/api/v1/timetables/`, `/api/v1/timetable-slots/`, `/api/v1/timetables/{id}/add-slot/` | effective-dated assignments, reassignment history, draft/versioned timetable conflict checks |
-| Attendance | `/api/v1/attendance-sessions/`, `/api/v1/attendance-sessions/open/`, `/api/v1/attendance-sessions/{id}/mark/`, `/api/v1/attendance-sessions/{id}/expected-students/`, `/api/v1/attendance-sessions/{id}/close/`, `/api/v1/attendance-sessions/{id}/correct/`, `/api/v1/attendance-records/`, `/api/v1/attendance-corrections/` | student offering-based attendance; corrections require reason and privileged grant |
-| Examinations | `/api/v1/examinations/assessment-schemes/`, `/api/v1/examinations/assessment-components/`, `/api/v1/examinations/grading-scales/`, `/api/v1/examinations/results/`, `/api/v1/examinations/results/submit/`, `/api/v1/examinations/results/{id}/return-for-correction|approve|publish|correct/` | configurable assessment/grading, weighted scoring, controlled workflow, correction history |
-| Report cards | `/api/v1/examinations/report-cards/`, `/api/v1/examinations/report-cards/generate/` | published-only snapshots; PDF download not implemented |
+| Teaching | `/api/v1/teacher-assignments/`, `/api/v1/teacher-assignments/my-assignments/`, `/api/v1/teacher-assignments/{id}/reassign/`, `/api/v1/workload-policies/`, `/api/v1/timetables/`, `/api/v1/timetables/{id}/add-slot|approve|publish|revise/`, `/api/v1/timetable-slots/` | effective-dated assignments, institution-scoped workload policy, recurrence, draft/approve/publish/revise workflow, versioned conflict checks |
+| Attendance | `/api/v1/attendance-sessions/`, `/api/v1/attendance-sessions/open/`, `/api/v1/attendance-sessions/{id}/mark/`, `/api/v1/attendance-sessions/{id}/expected-students/`, `/api/v1/attendance-sessions/{id}/close/`, `/api/v1/attendance-sessions/{id}/correct/`, `/api/v1/attendance-records/`, `/api/v1/attendance-corrections/`, `/api/v1/teacher-attendance/`, `/api/v1/teacher-attendance/mark/`, `/api/v1/teacher-attendance/{id}/approve/`, `/api/v1/teacher-attendance/query/` | student offering-based and teacher attendance; corrections require reason and privileged grant |
+| Examinations | `/api/v1/examinations/assessment-schemes/`, `/api/v1/examinations/assessment-components/`, `/api/v1/examinations/grading-scales/`, `/api/v1/examinations/grading-policies/`, `/api/v1/examinations/results/`, `/api/v1/examinations/results/submit/`, `/api/v1/examinations/results/{id}/return-for-correction|approve|publish|correct/` | configurable assessment/grading and effective-dated grading policy, weighted scoring, controlled workflow, correction history |
+| Report cards | `/api/v1/examinations/report-cards/`, `POST /api/v1/examinations/report-cards/generate/`, `GET /api/v1/examinations/report-cards/{id}/download/` | published-only snapshots; generated private PDF with hash/snapshot metadata and authenticated download |
 | Transcripts | `/api/v1/transcripts/requests/`, `/api/v1/transcripts/`, `/api/v1/transcripts/requests/{id}/review|approve|reject|generate/`, `/api/v1/transcripts/{id}/issue|correct|revoke|download|verifications/`, `POST /api/v1/transcripts/verify/` | request/issue/correct/revoke workflow; private PDF; public token verification with minimal response |
+| Alumni | `/api/v1/alumni/records/` | read-only graduation-linked alumni records |
 
-M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other queryset scoping is service-level/institution-level. M4 includes API role/negative tests for approval/publication and transcript request/generate/issue/download/verification; frontend/E2E integration and report-card PDF/download endpoints remain open.
+M3/M4 querysets are institution/campus scoped with object-level enforcement; role/negative and cross-scope/IDOR API tests cover the implemented grants. Frontend M3/M4 pages, 17 Vitest tests, and 2 mocked Playwright specs are implemented locally; remote CI evidence is pending commit/push. M3/M4 remain not accepted pending UAT/sign-off and Q-003.
 
 ## 7. File Uploads & Downloads
 - Multipart uploads with validation (type/size/MIME/extension, safe names); malware-scan hook where available.
@@ -82,5 +83,5 @@ M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other que
 
 ## 9. Documentation & Testing
 - OpenAPI schema is generated at `/api/schema/` with Swagger UI at `/api/docs/`; add examples for critical workflows.
-- M1–M3 have local service/workflow tests; M4 adds service tests plus API role/negative tests for result approval/publication and transcript permission/PDF/verification workflows. Frontend/E2E and contract coverage for validation/idempotency remain outstanding.
-- Remaining Phase 4 endpoint paths/names (graduation/alumni) are illustrative; finalize during implementation with consistent naming and OpenAPI review.
+- M1–M3 have local service/workflow tests; M4 adds service tests plus API role/negative tests for result approval/publication and transcript permission/PDF/verification workflows. The closure adds object-level scoping and cross-scope/IDOR API tests, 17 Vitest tests, and 2 mocked Playwright specs. Contract coverage for validation/idempotency remains outstanding.
+- Graduation→alumni linkage is implemented at `/api/v1/alumni/records/`; remaining Phase 4+ endpoint paths/names stay illustrative until coded.

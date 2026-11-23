@@ -1,5 +1,6 @@
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from apps.core.exceptions import ConflictError
@@ -11,6 +12,7 @@ from apps.permissions.permissions import (
     IsCampusScoped,
     IsInstitutionScoped,
 )
+from apps.permissions.services import user_can_access_campus_id, user_can_access_institution
 
 from . import services
 from .models import AcademicSession, Arm, ClassEnrolment, ClassLevel, Subject, SubjectOffering, Term
@@ -60,6 +62,32 @@ class ScopedViewSet(viewsets.ModelViewSet):
             qs = qs.filter(**{self.campus_field: user.campus_id})
         return qs
 
+    def _ensure_scope(self, obj):
+        user = self.request.user
+        if user.is_superuser:
+            return
+        institution_id = getattr(obj, "institution_id", None)
+        campus_id = getattr(obj, "campus_id", None)
+        if not user_can_access_institution(user, institution_id):
+            raise PermissionDenied("Outside institution scope.")
+        if not user_can_access_campus_id(user, campus_id):
+            raise PermissionDenied("Outside campus scope.")
+
+    def _candidate(self, serializer):
+        if serializer.instance is None:
+            return self.queryset.model(**serializer.validated_data)
+        for field, value in serializer.validated_data.items():
+            setattr(serializer.instance, field, value)
+        return serializer.instance
+
+    def perform_create(self, serializer):
+        self._ensure_scope(self._candidate(serializer))
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self._ensure_scope(self._candidate(serializer))
+        serializer.save()
+
     def handle_exception(self, exc):
         if isinstance(exc, services.AcademicWorkflowError):
             return super().handle_exception(ConflictError(detail=str(exc)))
@@ -69,6 +97,7 @@ class ScopedViewSet(viewsets.ModelViewSet):
 class SessionViewSet(ScopedViewSet):
     serializer_class = serializer_for(AcademicSession)
     queryset = AcademicSession.objects.all()
+    verb_map = {**ScopedViewSet.verb_map, "close": "update"}
 
     @action(detail=True, methods=["post"])
     def close(self, request, pk=None):
@@ -98,6 +127,7 @@ class ArmViewSet(ScopedViewSet):
 class SubjectViewSet(ScopedViewSet):
     serializer_class = serializer_for(Subject)
     queryset = Subject.objects.all()
+    campus_field = None
 
 
 class SubjectOfferingViewSet(ScopedViewSet):

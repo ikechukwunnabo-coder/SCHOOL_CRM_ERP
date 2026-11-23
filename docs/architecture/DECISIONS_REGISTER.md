@@ -1,10 +1,10 @@
 # DECISIONS REGISTER
 ## School CRM & ERP Platform
 
-**Phase:** Living implementation governance (Phase 0 baseline through Phase 3 hardening)
-**Document status:** Approved for implementation (conditional) — M1 accepted, Phase 2/M2 closed, Phase 3/M3 slice implemented but not accepted
+**Phase:** Living implementation governance (Phase 0 baseline through M3/M4 acceptance-gap closure)
+**Document status:** Approved for implementation (conditional) — M1 accepted, Phase 2/M2 closed, M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003
 **Authoritative specification:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`  
-**Revision date:** 20 November 2026  
+**Revision date:** 23 November 2026
 **Primary backend runtime:** Python 3.14.x (D-010 validated in Phase 1 scaffold/CI on 2026-11-20)  
 **Architecture:** Modular monolith, API-first
 
@@ -36,8 +36,7 @@ The following decisions establish the initial project direction and are approved
 
 **Decision:** Python 3.14.x is the approved provisional backend runtime target.
 
-**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`, `45130273958`, `45135466158`, `45149166162`; PostgreSQL 18 runtime, 39 backend tests locally and in CI through transcript slice)
-. Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
+**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; historical verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`, `45130273958`, `45135466158`, `45149166162`; PostgreSQL 18 runtime and 39 backend tests through the transcript slice). The M3/M4 closure has local evidence only (68 backend tests, 17 Vitest tests, 2 mocked Playwright specs); remote CI evidence is pending commit/push and no closure run ID exists. Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
 
 ### 2.1 Backend technology baseline
 
@@ -324,7 +323,7 @@ WAEC and NECO-related structures must be configurable where required. Do not ass
 **Interim for implementation:** fully configurable/effective-dated structures with placeholder/default seed data only until school confirmation (Q-003). No hardcoded statutory rules.
 
 **Owner:** Academic Management / Product  
-**Approval:** Approved approach for implementation. M3 added configurable session/term structures but retained a hard-coded 40-hour teacher workload cap for the initial slice; replace with school-configurable policy before M3 acceptance. Official grading/calendar policies remain pending (Q-003), required before results/transcript UAT and go-live.
+**Approval:** Approved approach for implementation. M3 now includes an institution-scoped, effective-dated configurable workload policy (no hard-coded 40-hour cap) and a configurable effective-dated `GradingPolicy`; both remain placeholder/default values until official rules are confirmed. Official grading/calendar policies remain pending (Q-003), required before results/transcript UAT and go-live.
 
 ## D-017 — Payroll and statutory calculations
 
@@ -420,9 +419,9 @@ Application boundaries (implemented apps marked in Phase 1/M1, Phase 2/M2, or Ph
 | `guardians` | Guardian profiles and student relationships (M2) |
 | `employees` | Staff and employee records (M3 slice) |
 | `academics` | Academic sessions, terms, class levels/arms and subjects/offerings (M3 slice) |
-| `teaching` | Effective-dated subject-teacher allocations and timetable conflicts (M3 slice) |
-| `attendance` | Student offering-based attendance; staff attendance still proposed (M3 slice) |
-| `examinations` | Assessments, marks, results and approval workflows |
+| `teaching` | Effective-dated subject-teacher allocations, configurable workload policy, timetable recurrence and publish workflow (M3) |
+| `attendance` | Student offering-based attendance and teacher attendance (M3) |
+| `examinations` | Assessments, marks, results, grading policy and approval workflows (M4) |
 | `transcripts` | Cumulative transcript generation and verification |
 | `identity_cards` | Student and staff identity cards |
 | `finance` | Fees, invoices, payments and receipts |
@@ -432,7 +431,7 @@ Application boundaries (implemented apps marked in Phase 1/M1, Phase 2/M2, or Ph
 | `communications` | Email, SMS and notifications |
 | `portals` | Parent, student and teacher portal functionality |
 | `cms` | Public website and content management |
-| `alumni` | Alumni records and relationships |
+| `alumni` | Graduation-linked alumni records and relationships (M4 closure) |
 | `reporting` | Reports and analytics |
 | `audit` | Audit events and sensitive-operation history |
 | `integrations` | External provider adapters and interfaces |
@@ -584,38 +583,59 @@ No shared production administrator account should be used.
 **Owner:** Product / School Management  
 **Approval:** Approved on 2026-11-20; permission granted to close Phase 2 and proceed to Phase 3 (Academic & Teaching). Provider-dependent production integrations and containerized backend/Celery runtime validation remain tracked hardening items and do not block M3.
 
-## D-028 — Phase 3 M3 implementation status (not accepted)
+## D-028 — Phase 3 M3 implementation status (hardening closed locally; not accepted)
 
-**Decision:** Record the Phase 3 Academic & Teaching vertical slice as implemented for local evidence while keeping M3 **open** until API role/negative tests, role-name alignment, configurable workload policy, timetable publish/recurrence policy, teacher attendance, and frontend/E2E workflows are complete.
+**Decision:** Record the Phase 3 Academic & Teaching vertical slice and its technical hardening as implemented locally. M3 remains **not accepted** pending formal UAT/sign-off and Q-003 institutional confirmation; the previously listed M3 gaps are no longer open implementation items.
 
-**Scope implemented:** `employees`, `academics`, `teaching`, and `attendance` apps; academic sessions/terms, class levels/arms, subjects/offerings, class enrolments; effective-dated teacher assignments with reassignment history; draft/versioned timetable slots with teacher/class/room conflict checks; student offering-based attendance sessions/marking/corrections with privileged correction policy and application-level audit events; M3 module/verb grants seeded via `0004_seed_phase3_permissions.py`.
+**Scope implemented:** `employees`, `academics`, `teaching`, and `attendance` apps; academic sessions/terms, class levels/arms, subjects/offerings, class enrolments; effective-dated teacher assignments with reassignment history; draft/versioned timetable slots with recurrence and draft/approve/publish/revise workflow plus teacher/class/room conflict checks; institution-scoped configurable workload policy; teacher attendance; student offering-based attendance sessions/marking/corrections with privileged correction policy and application-level audit events; object-level queryset scoping; canonical RBAC role names with backward-compatible aliases; role/negative and cross-scope/IDOR API tests; M3 module/verb grants seeded via `0004_seed_phase3_permissions.py`.
 
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (29 tests), and `manage.py migrate` against PostgreSQL 18. M3 commit `d5c293a` passed remote CI run `45130273958` (frontend build/tests and backend lint/checks/migration consistency/tests green).
-
-**Owner:** Product / Engineering
-**Approval:** Not an acceptance decision. The implementation is committed with passing CI; Phase 3 remains in hardening and M3 gaps remain explicitly tracked while Phase 4 proceeds.
-
-## D-029 — Phase 4 M4 examinations backend slice (not accepted)
-
-**Decision:** Record the initial Phase 4 Examinations backend slice as implemented for local evidence while keeping M4 **open** until PDF report cards, graduation→alumni linkage, and frontend/E2E workflows are complete.
-
-**Scope implemented:** `examinations` app; assessment schemes/components; effective-dated grading scales; offering-scoped teacher result entry with weighted scoring; submit/return/approve/publish workflow with self-approval denial; correction records with prior-value preservation and re-approval; published-only report-card snapshots; institution/campus-scoped APIs; module/verb grants seeded via `0005_seed_phase4_permissions.py`; application-level audit events; service and API role/negative tests.
-
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (34 tests), and `manage.py migrate` against PostgreSQL 18. M4 commit `3f04813` passed remote CI run `45135466158` (frontend build/tests and backend lint/checks/migration consistency/tests green).
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and audit-chain verification pass against PostgreSQL 18. Historical M3 commit `d5c293a` passed remote CI run `45130273958` with 29 tests; the closure code is not yet committed or pushed, so no remote CI run ID exists for the current state.
 
 **Owner:** Product / Engineering
-**Approval:** Not an acceptance decision. The backend slice is validated locally; M4 remains open and official grading policy confirmation (Q-003) is still required before transcript/report-card UAT.
+**Approval:** Not an acceptance decision. M3 technical hardening is closed locally; formal UAT/sign-off and Q-003 remain required before acceptance.
 
-## D-030 — Phase 4 M4 transcript backend slice (not accepted)
+## D-029 — Phase 4 M4 examinations backend slice (hardening closed locally; not accepted)
 
-**Decision:** Record the Phase 4 transcript backend slice as implemented for local evidence while keeping M4 **open** until PDF report cards, graduation→alumni linkage, and frontend/E2E workflows are complete.
+**Decision:** Record the Phase 4 Examinations backend slice and its technical hardening as implemented locally. M4 remains **not accepted** pending formal UAT/sign-off and Q-003 official grading-policy confirmation; the previously listed M4 gaps are no longer open implementation items.
 
-**Scope implemented:** `transcripts` app; transcript request/review/approve/generate/issue/correct/revoke workflow; published-only result snapshots that preserve historical grading-scale content; completeness detection for missing/unpublished sessions and graduation records; private PDF generation with QR verification path; hash-only verification tokens with minimal public verification responses; version supersession that invalidates prior tokens while preserving prior PDFs/snapshots; institution/campus-scoped APIs; module/verb grants seeded via `0006_seed_phase4_transcript_permissions.py`; application-level audit events; service/API role/negative tests.
+**Scope implemented:** `examinations` app; assessment schemes/components; effective-dated grading scales and configurable effective-dated `GradingPolicy` (placeholder/default values until Q-003 is resolved); offering-scoped teacher result entry with weighted scoring; submit/return/approve/publish workflow with self-approval denial; correction records with prior-value preservation and re-approval; published-only report-card snapshots; PDF report cards with private storage/hash/snapshot and authenticated download; DB-level immutable/tamper-evident audit chain with hash verification; institution/campus-scoped and object-level querysets; role/negative and cross-scope/IDOR API tests; module/verb grants seeded via `0005_seed_phase4_permissions.py`.
 
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (39 tests) against PostgreSQL 18. Transcript code commit `a603498` passed remote CI run `45149166162` (frontend build/tests and backend lint/checks/migration consistency/tests green).
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and `verify_audit_chain` pass against PostgreSQL 18. Historical M4 commit `3f04813` passed remote CI run `45135466158` with 34 tests; the closure code is not yet committed or pushed, so no remote CI run ID exists for the current state.
 
 **Owner:** Product / Engineering
-**Approval:** Not an acceptance decision. The transcript slice is validated locally; M4 remains open, and official grading policy confirmation (Q-003) is still required before transcript/report-card UAT.
+**Approval:** Not an acceptance decision. M4 technical hardening is closed locally; official grading policy confirmation (Q-003) and formal UAT/sign-off remain required before transcript/report-card acceptance and go-live.
+
+## D-030 — Phase 4 M4 transcript backend slice (hardening closed locally; not accepted)
+
+**Decision:** Record the Phase 4 transcript backend slice, including graduation→alumni linkage and frontend coverage, as implemented locally. M4 remains **not accepted** pending formal UAT/sign-off and Q-003 official grading-policy confirmation.
+
+**Scope implemented:** `transcripts` app; transcript request/review/approve/generate/issue/correct/revoke workflow; published-only result snapshots that preserve historical grading-scale content; completeness detection for missing/unpublished sessions and graduation records; private PDF generation with QR verification path; hash-only verification tokens with minimal public verification responses; version supersession that invalidates prior tokens while preserving prior PDFs/snapshots; institution/campus-scoped APIs; graduation→alumni linkage via `apps.alumni`; M3/M4 frontend pages with 17 Vitest tests and 2 mocked Playwright specs; module/verb grants seeded via `0006_seed_phase4_transcript_permissions.py` and `0008_seed_alumni_permissions.py`; application-level audit events; service/API role/negative and cross-scope/IDOR tests.
+
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), `npm run lint`, `npm test` (17 passed), `npm run build`, and `npm run test:e2e` (2 passed) all pass. Historical transcript commit `a603498` passed remote CI run `45149166162` with 39 tests; the closure code is not yet committed or pushed, so no remote CI run ID exists for the current state.
+
+**Owner:** Product / Engineering
+**Approval:** Not an acceptance decision. The transcript slice and closure work are validated locally; M4 remains not accepted pending Q-003 and formal UAT/sign-off.
+
+## D-031 — M3/M4 acceptance-gap closure implemented locally; not accepted pending UAT/sign-off and Q-003
+
+**Decision:** Record the previously listed M3/M4 technical hardening gaps as closed locally. This is an implementation-status decision only: M3 and M4 remain **not accepted** until formal UAT and owner sign-off are complete and Q-003 official grading-policy confirmation is received. Configurable workload, grading and report-card policies are placeholders/defaults until institutional values are confirmed.
+
+**Scope closed locally:**
+- Object-level queryset scoping plus role/negative and cross-scope/IDOR API tests for M3/M4 grants.
+- Canonical RBAC role names with backward-compatible aliases.
+- Institution-scoped configurable workload policy; timetable recurrence and draft/approve/publish workflow; teacher attendance.
+- DB-level immutable/tamper-evident audit chain with sequenced hashes and a hash-verification management command.
+- PDF report cards with private storage, hash/snapshot metadata and authenticated download API.
+- Configurable effective-dated `GradingPolicy` with placeholder/default policy data pending Q-003.
+- Graduation→alumni linkage via new `apps.alumni`.
+- Frontend M3/M4 pages, 17 Vitest unit tests, and 2 mocked Playwright E2E specs.
+
+**Local evidence:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` -> 68 passed against PostgreSQL 18; `python manage.py verify_audit_chain` -> valid; `npm run lint` pass; `npm test` -> 17 passed; `npm run build` pass; `npm run test:e2e` -> 2 passed. CI configuration now includes backend audit-chain verification and frontend lint/E2E.
+
+**Remote CI:** No remote CI run ID exists for this closure because the new code is not committed or pushed. Remote CI evidence is pending until commit/push. Containerized backend/Celery runtime and Celery/Redis integration remain separate outstanding infrastructure validation items.
+
+**Owner:** Product / Engineering / School Management
+**Approval:** Not an acceptance decision. Formal UAT/sign-off and Q-003 remain required; no production acceptance is implied.
 
 ---
 
@@ -625,7 +645,7 @@ No shared production administrator account should be used.
 |---|---|---|---|---|---|
 | Q-001 | Which payment gateway and merchant account will the school use? | Online payment go-live and reconciliation | Finance / Management | **Pending.** Interim: adapter interface + mock/sandbox in dev/CI (D-012). Required before staging/production payment go-live and reconciliation UAT. | No (tracked) |
 | Q-002 | Which email and SMS providers and sender identities are approved? | Notification delivery | IT / Operations | **Pending.** Interim: configurable providers with dev mail/SMS mocks (D-013). Required before production notification go-live. | No (tracked) |
-| Q-003 | What are the official grading scales, CA/exam weightings and promotion rules? | Results and transcripts | Academic Management | **Pending.** Interim: configurable/effective-dated structures with placeholder/default seed only (D-016). Required before results/transcript UAT and go-live. | No (tracked) |
+| Q-003 | What are the official grading scales, CA/exam weightings and promotion rules? | Results and transcripts | Academic Management | **Pending.** Interim: configurable/effective-dated structures and `GradingPolicy` with placeholder/default seed only (D-016/D-031). Required before results/transcript UAT, sign-off and go-live. | No (tracked) |
 | Q-004 | Are there existing student, staff, financial or academic records to migrate? | Migration planning | School Administration / IT | **Pending.** Interim: implement import tooling per spec (D-018); define mappings/reconciliation when sources known. Required before any production migration. | No (tracked) |
 | Q-005 | What hosting environment and infrastructure budget are available? | Deployment and sizing | Management / IT | **Pending.** Interim: local/dev scaffold and spec NFR targets (D-014/D-015/D-019). Required before staging/prod and SLO validation. | No (tracked) |
 | Q-006 | Are there institution-specific regulatory, examination-board or reporting requirements? | Compliance and reporting | Management | **Pending.** Interim: configurable reporting/retention/privacy controls per spec; incorporate specifics when provided. | No (tracked) |
@@ -729,27 +749,28 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-030 | Approved/recorded for implementation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028 records M3 implemented-but-not-accepted status; D-029/D-030 record M4 backend slices implemented-but-not-accepted; provider/school-policy items remain pending) |
+| D-001–D-031 | Approved/recorded for implementation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028–D-030 record M3/M4 implemented locally but not accepted; D-031 records closure of the listed hardening gaps locally; provider/school-policy items remain pending) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
-| School-specific academic policies | Pending confirmation (Q-003) — configurable placeholders approved |
+| School-specific academic policies | Pending confirmation (Q-003) — configurable `GradingPolicy`/workload placeholders/defaults in use |
 | Infrastructure selection | Pending (Q-005) — targets/approach approved |
-| Architecture validation | Blueprint reviewed/documented; to be enforced and refined during implementation and code review |
-| Formal owner approval evidence | Recorded in this register (subject to ongoing governance) |
-| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3/M3 academic/teaching slice implemented but not accepted; Phase 4/M4 examinations and transcript backend slices implemented but not accepted |
-| Testing | 39 backend tests passing locally and in CI (29 at M3, 5 M4 examinations, 5 transcript); transcript CI green (`45149166162`, commit `a603498`); M4 examinations CI green (`45135466158`); M3 CI green (`45130273958`); Phase 2 closure CI green (`44775171408`); containerized backend runtime pending |
+| Architecture validation | Blueprint reviewed/documented; enforced and refined during implementation and code review |
+| Formal owner approval evidence | Recorded in this register for baselines; M3/M4 UAT/sign-off not yet recorded |
+| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003 |
+| Testing | Closure local evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass. Historical CI was green through transcript slice (`45149166162`); remote CI evidence for the uncommitted closure is pending, with no run ID; containerized backend runtime pending |
 
 ---
 
 # 9. Phase 0 Readiness Recommendation
 
-**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; Phase 3/M3 slice implemented but not accepted; Phase 4/M4 examinations and transcript backend slices implemented but not accepted**
+**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003**
 
 The project may proceed now with:
-- Continued Phase 3 Academic & Teaching hardening per `IMPLEMENTATION_ROADMAP.md` and D-028: API role/negative tests, role-name alignment, configurable workload policy, timetable publish/recurrence, teacher attendance, and frontend/E2E workflows.
-- Continued Phase 4 Examinations build-out per D-029/D-030: PDF report cards, graduation→alumni linkage, and frontend/E2E workflows.
-- Completion of remaining Phase 1 hardening (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
+- Formal M3/M4 UAT and owner sign-off using the locally validated closure evidence recorded in D-031; do not record acceptance before sign-off.
+- Resolution of Q-003 official grading/CA/promotion policy and replacement of placeholder/default `GradingPolicy` values before results/transcript acceptance and go-live.
+- Commit/push of the closure code to obtain the pending remote CI run for backend audit-chain verification and frontend lint/E2E; no remote CI ID exists yet.
+- Completion of remaining infrastructure validation (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
 - Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.
 

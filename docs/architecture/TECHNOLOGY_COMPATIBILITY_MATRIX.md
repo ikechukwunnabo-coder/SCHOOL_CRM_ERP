@@ -1,6 +1,6 @@
 # Technology Compatibility Matrix
 
-**Status:** Validated through the M4 transcript backend slice (2026-11-23): PostgreSQL 18 container healthy, 39 backend tests passing locally and in remote CI (`45149166162`); frontend build green. D-010 confirmed for committed pins.
+**Status:** Validated locally through the M3/M4 acceptance-gap closure (2026-11-23): PostgreSQL 18 container healthy, 68 backend tests passing, audit-chain verification valid, frontend lint/unit/build/E2E green. Historical remote CI was green through the transcript slice (`45149166162`); the closure code is uncommitted/unpushed, so remote CI evidence is pending and no closure run ID exists. D-010 confirmed for committed pins.
 
 > Per Master Spec: verify official compatibility and security support, pin exact compatible versions, commit lockfiles. Do not blindly install unpinned latest versions.
 
@@ -25,25 +25,29 @@
 | React Router | 7.x | ^7.6.0 (`frontend/package.json`) | auth routing shell implemented | **Lockfile-backed** |
 | Docker / Compose | Engine + Compose v2 | CLI 29.9.3 required `DOCKER_API_VERSION=1.44` for this Desktop engine | db/redis healthy; frontend image built; backend image export hangs in Docker Desktop | **Partial** |
 
-## 2. Validation Evidence (2026-11-20)
-- **Backend on PostgreSQL 18:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**39 passed**: 29 at M3 covering health, auth/audit, RBAC/per-verb grants, institution/campus scoping, admissions, duplicate identity, guardians, lifecycle, private documents, imports, academic structure, teacher allocations, timetable conflicts, attendance scope/corrections; 5 M4 examinations covering assessment configuration, weighted scoring/grading, result workflow, correction history, report-card snapshots, and approval/publication role checks; 5 transcript covering PDF/QR generation, completeness blocking, issuance/download permissions, public verification, correction versioning, and revocation).
-- **Migrations:** `python manage.py migrate` applied M1/M2/M3/M4 migrations successfully, including `app_permissions.0006_seed_phase4_transcript_permissions` and `app_transcripts.0001_initial`; `makemigrations --check --dry-run` reports no drift.
+## 2. Validation Evidence (2026-11-23)
+- **Backend on PostgreSQL 18:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**68 passed**). Historical slices were 29 M3 tests, 5 M4 examinations tests and 5 transcript tests; the closure adds object-level scoping, role/negative and cross-scope/IDOR tests, immutable audit-chain tests, PDF report cards, grading policy, timetable/teacher-attendance and alumni coverage.
+- **Audit chain:** `python manage.py verify_audit_chain` -> valid (sequence, predecessor hash, entry hash).
+- **Migrations:** `python manage.py makemigrations --check --dry-run` reports no drift; applied migrations include M3 workload/recurrence/publish and teacher attendance, M4 report-card PDF/grading policy, alumni linkage, role normalization and audit immutability chains.
 - **Containers:** `docker compose up -d db redis` healthy (Postgres 18.7, Redis 8). Native Windows PostgreSQL on host port 5432 shadows the published port; use the compose network with `DOCKER_API_VERSION=1.44` for container-side validation.
-- **Frontend:** `npm run build` (`tsc -b && vite build`) pass locally and in remote CI on Node 22.
-- **Remote CI:** green for scaffold (`44761962350`), Phase 2 (`44769870049`), Phase 2 closure (`44775171408`), M3 (`45130273958`, commit `d5c293a`), M4 examinations (`45135466158`, commit `3f04813`), M4 evidence (`45136374503`, commit `7913324`), and transcript (`45149166162`, commit `a603498`) against pinned `backend/requirements.txt` and `frontend/package-lock.json`. Node 20 action deprecation warnings are non-blocking.
+- **Frontend:** `npm run lint` pass; `npm test` -> **17 Vitest tests passed**; `npm run build` (`tsc -b && vite build`) pass; `npm run test:e2e` -> **2 mocked Playwright specs passed**.
+- **Remote CI:** historical runs green for scaffold (`44761962350`), Phase 2 (`44769870049`), Phase 2 closure (`44775171408`), M3 (`45130273958`, commit `d5c293a`), M4 examinations (`45135466158`, commit `3f04813`), M4 evidence (`45136374503`, commit `7913324`), and transcript (`45149166162`, commit `a603498`). CI now also runs backend audit-chain verification and frontend lint/E2E, but the closure code is not committed or pushed; there is no remote CI run ID for it and evidence is pending until commit/push.
 - **Dependencies/locks:** `backend/requirements.txt` and `backend/requirements-dev.txt` pinned (pip freeze); `frontend/package-lock.json` committed. Deviation from the `uv`/`pnpm` target: neither tool is installed here, so pip freeze + npm lock are the committed locks.
-- **Not validated:** backend Docker image export hangs in Docker Desktop; Celery worker and containerized backend runtime not exercised.
+- **Not validated:** backend Docker image export hangs in Docker Desktop; Celery worker and containerized backend runtime not exercised. M3/M4 are not accepted pending UAT/sign-off and Q-003.
 
 ## 3. Package & Lockfile Strategy (current)
 - **Backend:** declared in `backend/pyproject.toml`; pinned snapshot committed as `backend/requirements.txt` (+ `backend/requirements-dev.txt`) from scaffold venv. Future: consider compiled/hashed locks and CI drift checks.
 - **Frontend:** `frontend/package.json` + committed `frontend/package-lock.json` (npm). CI configured for npm cache/install.
 - **Python venv:** local `school_erp_venv/` at project root; not committed.
-- **CI:** workflow scaffold added (`.github/workflows/ci.yml`) to install from pinned files and run lint/check/migration-check/tests (backend) and build/test (frontend); requires successful remote run for verification.
+- **CI:** workflow (`.github/workflows/ci.yml`) installs from pinned files and runs backend lint/check/migration-check/tests plus audit-chain verification, and frontend lint/unit tests/build/E2E. Local closure evidence is green; a successful remote run is still pending commit/push.
 
 ## 4. Compatibility Verification Checklist (D-010)
 - [x] Generate backend dependency pin snapshot and frontend lockfile for scaffold
 - [x] Run `django check`, migration consistency check, and backend test harness against PostgreSQL 18
 - [x] Run frontend typecheck/build locally and in CI on Node 22
+- [x] Run M3/M4 closure backend checks locally: 68 tests, audit-chain verification valid
+- [x] Run M3/M4 closure frontend checks locally: lint, 17 Vitest tests, build, 2 mocked Playwright specs
+- [ ] Obtain remote CI evidence for the closure (not committed/pushed; no run ID)
 - [x] Confirm Django 5.2 LTS / Python 3.14 / psycopg 3 compatibility in the executed CI and local PostgreSQL 18 run
 - [ ] Confirm DRF, Celery, Redis client, auth/storage libs compatibility in an integrated Celery/Redis runtime
 - [ ] Validate `docker compose` backend/celery services and containerized workflows (db/redis and frontend image validated)
@@ -60,4 +64,4 @@
 - Lockfile tooling deviates from the approved `uv`/`pnpm` strategy (pip freeze and npm lock committed instead).
 - Provider SDKs (payments/SMS/email/storage) may introduce additional constraints when integrated.
 
-**Decision status:** D-010 **Validated for committed pins** (Phase 2/closure/M3/M4/transcript CI green, PostgreSQL 18 runtime validated, 39 backend tests locally and in CI through transcript slice). Open follow-ups: containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling.
+**Decision status:** D-010 **Validated for committed pins** (historical Phase 2/M3/M4/transcript CI green, PostgreSQL 18 runtime validated; M3/M4 closure locally validated with 68 backend tests, audit-chain verification, 17 Vitest tests and 2 mocked Playwright specs). Open follow-ups: remote CI evidence for the uncommitted closure, containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling. M3/M4 remain not accepted pending UAT/sign-off and Q-003.
