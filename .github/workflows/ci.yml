@@ -53,6 +53,8 @@ jobs:
         run: python manage.py check
       - name: Migration consistency
         run: python manage.py makemigrations --check --dry-run
+      - name: Apply migrations
+        run: python manage.py migrate --noinput
       - name: Tests
         run: pytest -q
       - name: Audit chain verification
