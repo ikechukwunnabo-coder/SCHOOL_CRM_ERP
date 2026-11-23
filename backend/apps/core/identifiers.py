@@ -7,6 +7,7 @@ from .models import IdentifierSequence
 DEFAULT_PATTERNS = {
     "application_number": "APP-{year}-{seq:06d}",
     "admission_number": "ADM-{year}-{seq:06d}",
+    "transcript_reference": "TR-{institution_code}-{year}-{seq:06d}",
 }
 
 

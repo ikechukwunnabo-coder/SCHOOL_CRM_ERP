@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.teaching",
     "apps.attendance",
     "apps.examinations",
+    "apps.transcripts",
 ]
 
 MIDDLEWARE = [
@@ -152,6 +153,9 @@ PRIVATE_MEDIA_ROOT = BASE_DIR / env("PRIVATE_MEDIA_ROOT", default="private-media
 PUBLIC_MEDIA_ROOT = BASE_DIR / env("PUBLIC_MEDIA_ROOT", default="public-media")
 DOCUMENT_UPLOAD_MAX_BYTES = env.int("DOCUMENT_UPLOAD_MAX_BYTES", default=10 * 1024 * 1024)
 DOCUMENT_MALWARE_SCAN_HOOK = env("DOCUMENT_MALWARE_SCAN_HOOK", default="")
+TRANSCRIPT_VERIFICATION_BASE_URL = env(
+    "TRANSCRIPT_VERIFICATION_BASE_URL", default="/verify/transcripts"
+)
 
 if STORAGE_BACKEND == "s3":
     STORAGES["private_documents"] = {

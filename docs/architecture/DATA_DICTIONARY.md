@@ -1,6 +1,6 @@
 # Data Dictionary
 
-**Status:** Living dictionary. M1/M2 fields, the M3 academic/teaching/attendance slice, and the M4 examinations/results/report-card backend entities are implemented in migrations; values below are representative, not exhaustive. Transcript/alumni and later entities remain blueprint-only.
+**Status:** Living dictionary. M1/M2 fields, the M3 academic/teaching/attendance slice, and the M4 examinations/results/report-card/transcript backend entities are implemented in migrations; values below are representative, not exhaustive. Alumni and later entities remain blueprint-only.
 
 ## 1. Conventions
 - **Types:** `uuid`, `string(n)`, `text`, `int`, `decimal(p,s)`, `bool`, `date`, `datetime(tz)`, `jsonb`, `enum`.
@@ -74,7 +74,7 @@
 | AttendanceRecord | attendance_session_id, student_id, status, marked_by, marked_at, correction_count | uuid FK/enum/datetime/int | Y | unique session+student; present/absent/late/excused |
 | AttendanceCorrection | record_id, previous_status, new_status, reason, requested_by, approved_by | uuid FK/enum/text/uuid FK | Y | mandatory reason; privileged approval; application-level audit |
 
-### Examinations / Results / Transcripts (M4 backend slice implemented for non-transcript rows)
+### Examinations / Results / Transcripts (M4 backend slice implemented)
 | Entity | Field | Type | Req | Notes/Validation |
 |---|---|---|---|---|
 | AssessmentScheme | institution_id, session_id, class_level_id, code, effective_from | uuid FK/string/date | Y | campus/term/arm optional; code unique per institution; effective_to >= effective_from |
@@ -87,9 +87,18 @@
 |  | status | enum | Y | draft→submitted→returned→submitted→approved→published; self-approval denied |
 | ResultCorrection | previous_scores, revised_scores, previous_total, revised_total, previous_grade, revised_grade, reason | jsonb/decimal/string/text | Y | mandatory reason; prior values preserved; result returns to submitted for re-approval |
 | ReportCard | reference, version, results_snapshot, template_version | string/int/jsonb/string | Y | unique institution+reference; snapshots generated only from published results |
-| Transcript | reference_number | string | Y | **unique**, immutable once issued; not implemented |
-|  | verification_token | string/hash | Y | non-guessable; no sensitive data encoded in QR |
-|  | version, status | int/enum | Y | provisional/official; reissue preserves history |
+| TranscriptRequest | institution_id, campus_id, student_id, requested_by | uuid FK | Y/N | institution/campus scope; `requested_by` nullable on user deletion |
+|  | purpose, requested_kind, status | text/enum/enum | Y | requested/under_review/approved/rejected/generated/issued; provisional/official |
+|  | decision_reason, reviewed_at, approved_at | text/datetime | N | review/approval metadata; self-approval denied in service |
+| Transcript | reference_number, institution_id | string/uuid FK | Y | **unique per institution**; controlled correction issues a new reference |
+|  | request_id, supersedes_id, version | uuid FK/uuid FK/int | Y/N | correction chain; version must be > 0; old transcript becomes superseded |
+|  | kind, status | enum | Y | provisional/official; generated/issued/corrected/superseded/revoked |
+|  | verification_token_hash, verification_token_issued_at, verification_revoked_at | string(64)/datetime/datetime | Y/N | raw token returned once and encoded in PDF QR only; check hash stored globally unique |
+|  | file, file_ref, content_type, size_bytes, pdf_sha256, template_version | file/string/string/int/string/string | Y/N | private storage; authenticated download after RBAC/scope check |
+|  | issued_to, issue_purpose, issued_by, approved_by, issued_at | string/text/uuid FK/uuid FK/datetime | N/Y/N | issuance evidence; recipient and purpose required by service |
+|  | document_snapshot, results_snapshot, completeness | jsonb/jsonb/jsonb | Y | immutable-style snapshots of institution/student/results/grading/completeness at generation time |
+| TranscriptEvent | request_id/transcript_id, action, from_status, to_status, actor_id, reason | uuid FK/string/enum/uuid FK/text | Y/N | audit trail for request/generate/issue/correct/revoke/verify |
+| TranscriptVerification | transcript_id, token_hash, outcome, checked_at | uuid FK/string/enum/datetime | N/Y | outcomes: valid/invalid/revoked/superseded/invalid_state; public response excludes student data |
 
 ### Finance
 | Entity | Field | Type | Req | Notes/Validation |
@@ -131,4 +140,4 @@
 - Preserve history: lifecycle events, allocations, attendance corrections, result corrections/versions, transcript issues, asset custody, financial adjustments.
 - Separate public CMS fields/media from confidential ERP records and private documents.
 
-*Expand this dictionary per entity/table as migrations evolve; M3 refinements (workload/recurrence/staff attendance) and M4 refinements (attempts/ranking/promotion, PDF/file refs, transcripts) remain open.*
+*Expand this dictionary per entity/table as migrations evolve; M3 refinements (workload/recurrence/staff attendance) and M4 refinements (attempts/ranking/promotion, report-card PDF/file refs, alumni linkage) remain open.*

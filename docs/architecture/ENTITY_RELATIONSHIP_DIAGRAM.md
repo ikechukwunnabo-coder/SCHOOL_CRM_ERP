@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance entities and the M4 examinations/results/report-card entities are implemented as open hardening slices; remaining Phase 4+ entities are blueprint-only.
+**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance entities and the M4 examinations/results/report-card/transcript entities are implemented as open hardening slices; remaining Phase 4+ entities are blueprint-only.
 **Notation:** textual ER model (entities, key attributes, relationships). A visual diagram should be produced during implementation (e.g. dbdiagram/ERD tool) once reviewed.
 
 ## 1. Conventions
@@ -70,14 +70,15 @@
 - **ResultWorkflowAction** (`result_record_id` or batch, action, actor_id, timestamp, comments)
 - **ResultCorrection** (`result_record_id`, original_values, revised_values, reason, requester, reviewer, approver, timestamps, prior_version_ref)
 - **ReportCard** (`id`, student_id, session_id, term_id, generated_from published results snapshot/ref, template/version, status, file_ref, generated_at)
-- Relationships: ResultRecord unique per student/offering/scheme; ResultWorkflowAction records each transition; ResultCorrection preserves prior scores/total/grade with reason; only published results feed ReportCard JSON snapshots; ranking, attempts, promotion, PDF file refs, and transcript linkage remain pending.
+- Relationships: ResultRecord unique per student/offering/scheme; ResultWorkflowAction records each transition; ResultCorrection preserves prior scores/total/grade with reason; only published results feed ReportCard and Transcript JSON snapshots; ranking, attempts, promotion, and report-card PDF file refs remain pending.
 
-### 2.8 Transcripts & Alumni
-- **TranscriptRequest** (`id`, student_id, requested_by, purpose, status)
-- **Transcript** (`id`, student_id, reference_number [unique], type/status [provisional/official], version, issued_by/approved_by, issued_at, file_ref, verification_token/hash, grading-scheme refs preserved)
-- **TranscriptVerification** (lookup by token/ref exposing limited non-sensitive fields)
-- **AlumniProfile** (`id`, student_id [unique link], alumni_number?, graduation_session/class, contact/career/engagement fields, privacy settings)
-- Relationships: Student 1—0..1 AlumniProfile (linked, no duplicate person); transcripts trace to approved historical ResultRecords.
+### 2.8 Transcripts & Alumni (M4 transcript backend slice implemented; alumni blueprint-only)
+- **TranscriptRequest** (`id`, institution_id, campus_id?, student_id, requested_by, purpose, requested_kind [provisional/official], status [requested/under_review/approved/rejected/generated/issued], decision_reason, reviewed_by/approved_by, reviewed_at/approved_at)
+- **Transcript** (`id`, institution_id, campus_id?, student_id, request_id, supersedes_id?, reference_number [unique per institution], version, kind [provisional/official], status [generated/issued/corrected/superseded/revoked], verification_token_hash [unique], verification_token_issued_at, verification_revoked_at, file/file_ref, content_type, size_bytes, pdf_sha256, template_version, issued_to, issue_purpose, issued_by/approved_by, issued_at, document_snapshot, results_snapshot, completeness)
+- **TranscriptEvent** (`request_id?`, `transcript_id?`, action, from_status, to_status, actor_id, reason)
+- **TranscriptVerification** (`transcript_id?`, token_hash, outcome [valid/invalid/revoked/superseded/invalid_state], checked_at)
+- **AlumniProfile** (`id`, student_id [unique link], alumni_number?, graduation_session/class, contact/career/engagement fields, privacy settings) — not implemented
+- Relationships: one `TranscriptRequest` may produce multiple versioned `Transcript` rows; `supersedes` links corrections to prior transcripts; transcript snapshots preserve published results and historical grading content; verification logs every token check; Student 1—0..1 AlumniProfile remains pending.
 
 ### 2.9 Finance (MVP)
 - **FeeCategory** (`id`, institution_id, name, type)
@@ -124,7 +125,7 @@
 - M1: `accounts`, `institutions`, `permissions`, `audit`.
 - M2: `admissions`, `guardians`, `students`, `documents`, `imports`, identifier sequences/lifecycle history.
 - M3: `employees/0001_initial.py`, `academics/0001_initial.py`, `teaching/0001_initial.py`, `attendance/0001_initial.py`, and permission seed `permissions/0004_seed_phase3_permissions.py`.
-- M4: `examinations/0001_initial.py` and permission seed `permissions/0005_seed_phase4_permissions.py`.
-- Migration state validated with `manage.py makemigrations --check --dry-run` and `pytest -q` against PostgreSQL 18; M3/M4 remain open for schema refinements from workload/recurrence policy, PDF/transcript file refs, and promotion/attempt rules.
+- M4: `examinations/0001_initial.py`, `transcripts/0001_initial.py`, permission seeds `permissions/0005_seed_phase4_permissions.py` and `permissions/0006_seed_phase4_transcript_permissions.py`.
+- Migration state validated with `manage.py makemigrations --check --dry-run` and `pytest -q` against PostgreSQL 18; M3/M4 remain open for schema refinements from workload/recurrence policy, report-card PDF/file refs, alumni linkage, and promotion/attempt rules.
 
 *This ER model is a living blueprint refined with migrations; final schema/MRD continues to be validated during implementation.*

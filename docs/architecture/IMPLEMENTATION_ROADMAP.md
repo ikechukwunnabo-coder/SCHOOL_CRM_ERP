@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; Phase 3/M3 slice implemented; Phase 4/M4 examinations backend slice implemented; Phase 3/M3 hardening and M4 not accepted). Sequenced by dependencies and Master Spec Phases 0–7.
+**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; Phase 3/M3 slice implemented; Phase 4/M4 examinations and transcript backend slices implemented; Phase 3/M3 hardening and M4 not accepted). Sequenced by dependencies and Master Spec Phases 0–7.
 **Last updated:** 2026-11-23
 
 ## 1. Guiding Approach
@@ -39,8 +39,8 @@
 - **Scope:** assessment schemes/components, grading scales (effective-dated), result entry/validation, submission→review→approval→publish workflow, corrections/versioning, report cards (PDF), cumulative transcripts (generation/issuance/verification/versioning), graduation→alumni linkage, basic ID cards (if sequenced per MVP).
 - **Milestone M4:** assigned teacher submits results; controlled approval/publish; published report cards; official verifiable cumulative transcript from approved historical results; graduation links alumni; correction histories preserved.
 - **Dependencies:** teaching assignments/scopes, document/PDF generation, verification tokens/endpoints.
-- **Status (2026-11-23):** **M4 backend slice implemented; not accepted.** Added `examinations` app with assessment schemes/components, effective-dated grading scales, weighted result scoring, submit/return/approve/publish workflow with self-approval denial, correction history with re-approval, published-only report-card snapshots, audited transitions, module/verb grants, service tests, and API role/negative tests. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**34 passed**) against PostgreSQL 18; M4 commit `3f04813` passed remote CI `45135466158`. Remaining M4 work:
- PDF report cards, cumulative transcripts/verification/versioning, graduation→alumni linkage, frontend/E2E workflows, official grading-policy confirmation (Q-003).
+- **Status (2026-11-23):** **M4 backend slices implemented; not accepted.** Added `examinations` app with assessment schemes/components, effective-dated grading scales, weighted result scoring, submit/return/approve/publish workflow with self-approval denial, correction history with re-approval, published-only report-card snapshots, audited transitions, module/verb grants, service tests, and API role/negative tests. Added `transcripts` app with request/review/approve/generate/issue/correct/revoke workflow, immutable published-result snapshots, private PDF storage, QR/hash-only public verification, and version supersession. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**39 passed**) against PostgreSQL 18; M4 examinations commit `3f04813` passed remote CI `45135466158`; transcript slice is locally validated and pending commit/CI evidence. Remaining M4 work:
+ PDF report cards, graduation→alumni linkage, frontend/E2E workflows, official grading-policy confirmation (Q-003).
 
 ### Phase 5 — Finance & Portals (depends on M2, M3 context)
 - **Scope:** fee categories/schedules, invoices, payments (server-verified, idempotent), receipts/balances, refunds/reversals/adjustments, parent portal, teacher portal, notifications (in-app/email/SMS as available), basic dashboards.
@@ -58,7 +58,7 @@
 - **Gate:** production release approval.
 
 ## 3. Cross-Cutting (throughout)
-- RBAC/audit enforced per feature; migrations reviewed; tests (unit/integration/permission/E2E) added continuously; OpenAPI schema is wired and M1–M4 backend endpoint documentation is concrete in `API_DESIGN.md`; later domains remain illustrative; no hardcoded institution rules.
+- RBAC/audit enforced per feature; migrations reviewed; tests (unit/integration/permission/E2E) added continuously; OpenAPI schema is wired and M1–M4 backend endpoint documentation, including transcript verification, is concrete in `API_DESIGN.md`; later domains remain illustrative; no hardcoded institution rules.
 - Minimal environment-validation scaffold allowed early but must not bypass Phase 0 gates.
 
 ## 4. Release 2 / 3 (post-MVP, separate planning)

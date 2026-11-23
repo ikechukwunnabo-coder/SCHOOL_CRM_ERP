@@ -5,7 +5,7 @@
 **Authoritative spec:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md` (1,828 lines)  
 **Phase reference:** `# PHASE 0.md`
 
-> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1/M1 is accepted, Phase 2/M2 is closed, and the Phase 3/M3 academic/teaching and Phase 4/M4 examinations backend slices are implemented but not accepted. See `README.md`, `IMPLEMENTATION_ROADMAP.md`, `DECISIONS_REGISTER.md` (D-026–D-029), and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
+> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1/M1 is accepted, Phase 2/M2 is closed, and the Phase 3/M3 academic/teaching and Phase 4/M4 examinations/transcript backend slices are implemented but not accepted. See `README.md`, `IMPLEMENTATION_ROADMAP.md`, `DECISIONS_REGISTER.md` (D-026–D-030), and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
 
 ## 1. Executive Summary
 Phase 0 discovery artifacts have been drafted to translate the master specification into an implementation-ready blueprint. Core architecture, domain boundaries, ERD/data dictionary, RBAC, workflows, API conventions, and plans for technology, integrations, security, testing, deployment, and roadmap are documented. However, multiple material decisions require verification/approval and external inputs (versions, auth finalization, providers/credentials, infra, school-specific rules). **Recommendation: CONDITIONAL GO** for Release 1 development, contingent on resolving/approving the gating items in §4 and §6.
@@ -14,17 +14,17 @@ Phase 0 discovery artifacts have been drafted to translate the master specificat
 
 | # | Deliverable | Location | Status |
 |---|---|---|---|
-| 1 | Decisions Register | `docs/architecture/DECISIONS_REGISTER.md` | Living (D-026–D-029 recorded) |
+| 1 | Decisions Register | `docs/architecture/DECISIONS_REGISTER.md` | Living (D-026–D-030 recorded) |
 | 2 | System Architecture | `docs/architecture/SYSTEM_ARCHITECTURE.md` | Living (M1–M4 backend modules documented) |
 | 3 | Entity Relationship Diagram | `docs/architecture/ENTITY_RELATIONSHIP_DIAGRAM.md` | Living (M1–M4 backend entities implemented; later entities planned) |
 | 4 | Data Dictionary | `docs/architecture/DATA_DICTIONARY.md` | Living (M1–M4 backend fields representative; later entities planned) |
 | 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (D-026); M1–M4 backend enforcement documented, M3/M4 gaps open |
 | 6 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Living (M1–M2 implemented; M3/M4 backend slices open; later phases planned) |
 | 7 | API Design | `docs/architecture/API_DESIGN.md` | Living (M1–M4 backend endpoints concrete; later phases illustrative) |
-| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Validated through M4 backend locally and in remote CI (`45135466158`) |
+| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Validated through M4 backend locally (39 tests); committed pins green in remote CI (`45135466158`) |
 | 9 | Integration Specifications | `docs/architecture/INTEGRATION_SPECIFICATIONS.md` | Documented; provider integrations pending |
 | 10 | Security & Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Living (M1–M4 backend controls partial; production controls pending) |
-| 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Living (34 backend tests through M4 backend; API/E2E gaps open) |
+| 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Living (39 backend tests through transcript slice locally; API/E2E gaps open) |
 | 12 | Deployment & Operations Plan | `docs/architecture/DEPLOYMENT_AND_OPERATIONS_PLAN.md` | Documented; runtime/production validation pending |
 | 13 | Implementation Roadmap | `docs/architecture/IMPLEMENTATION_ROADMAP.md` | Living (M3/M4 backend implemented, not accepted) |
 
@@ -41,7 +41,7 @@ Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 - **D-014** local private storage/imports implemented in Phase 2 closure; S3-compatible provider config pending.
 - **D-016/D-018** academic rules and import tooling: M3/M2 slices implemented; official school policies and legacy mappings still pending (Q-003/Q-004).
 - **D-017** payroll/statutory calculation rules remain Release 2 and expert-review gated.
-- **D-026** RBAC baseline approved; **D-027** Phase 2/M2 closed; **D-028** Phase 3/M3 implemented but not accepted; **D-029** Phase 4/M4 examinations backend implemented but not accepted.
+- **D-026** RBAC baseline approved; **D-027** Phase 2/M2 closed; **D-028** Phase 3/M3 implemented but not accepted; **D-029/D-030** Phase 4/M4 examinations and transcript backend slices implemented but not accepted.
 
 ### 3.3 Open questions requiring management/school input
 - Q-001 Payment gateway/merchant credentials; Q-002 SMS/email providers & sender identities; Q-003 official grading/CA/promotion rules per level; Q-004 legacy data sources/volume; Q-005 hosting/infra/budget; Q-006 institution-specific regulatory/reporting needs.
@@ -54,7 +54,7 @@ Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 | No circular dependencies between Django apps | **Addressed in design** | Dependency direction to be codified/finalized (D-020) |
 | Institution/campus access enforced server-side | **Implemented in slices** | Required in all access paths; M1–M4 services/views enforce institution context, with broader negative tests still mandated |
 | Stable student/employee identities across lifecycle | **Implemented in slices** | M2 admissions→student conversion and M3 employees implemented; alumni linkage remains pending |
-| Historical academic results & grading schemes preserved | **Implemented in slices** | M4 effective-dated grading scales, stored scale selection, correction history, and published report-card snapshots; cumulative transcript verification/versioning pending |
+| Historical academic results & grading schemes preserved | **Implemented in slices** | M4 effective-dated grading scales, stored scale selection, correction history, published report-card snapshots, and cumulative transcript snapshots with hash-token verification/versioning |
 | Subject-teacher allocations with effective dates & audit history | **Implemented in M3 slice** | Effective-dated assignments with reassignment history; configurable workload, recurrence/publication, and teacher attendance remain open |
 | Traceable financial posting/reversal/reconciliation | **Specified** | No posted-txn deletion, server-verified/idempotent payments; **not implemented** |
 | Clear inventory/procurement/asset/finance boundaries | **Specified** | Distinct modules + integration/traceability rules; **not implemented** |
@@ -99,8 +99,8 @@ Per `IMPLEMENTATION_ROADMAP.md`: **Phase 0 (done: documented)** → Phase 1 Foun
 
 ## 9. Honest Status Statement
 - **Documented:** Phase 0 deliverables (13) and readiness report drafted in `docs/architecture/`, with current status notes added as implementation progressed.
-- **Approved:** Baseline decisions D-001–D-021 documented; D-010 validated; D-026 RBAC baseline approved; D-027 Phase 2/M2 closed; D-028/D-029 record M3/M4 as implemented but not accepted.
-- **Implemented:** M1 foundation, M2 student/admissions vertical slice, M3 academic/teaching/attendance slice, and M4 examinations/results/report-card backend slice. M3/M4 remain open for hardening and missing workflows.
-- **Tested:** 34 backend tests pass locally and in M4 remote CI (`45135466158`) against PostgreSQL 18; M3 remote CI green (`45130273958`). Frontend build green; E2E and production runtime validation remain open.
+- **Approved:** Baseline decisions D-001–D-021 documented; D-010 validated; D-026 RBAC baseline approved; D-027 Phase 2/M2 closed; D-028/D-029/D-030 record M3/M4 backend slices as implemented but not accepted.
+- **Implemented:** M1 foundation, M2 student/admissions vertical slice, M3 academic/teaching/attendance slice, and M4 examinations/results/report-card/transcript backend slices. M3/M4 remain open for hardening and missing workflows.
+- **Tested:** 39 backend tests pass locally against PostgreSQL 18 (34 through M4 examinations, plus 5 transcript tests); M4 remote CI green (`45135466158`) and M3 remote CI green (`45130273958`). Transcript CI evidence is pending. Frontend build green; E2E and production runtime validation remain open.
 
 *Next action:* complete M3/M4 hardening and remaining Phase 4 workflows, then obtain approval at the appropriate milestone gates; keep unresolved provider, school-policy, and infra decisions tracked in `DECISIONS_REGISTER.md`.

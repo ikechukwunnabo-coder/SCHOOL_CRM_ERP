@@ -1,6 +1,6 @@
 # Workflow Specifications
 
-**Status:** Living workflow specification. M1–M2 workflows are implemented; M3 academic/teaching/attendance workflows and the M4 examinations/results/report-card backend workflows are implemented as open hardening slices. Workflows are enforced by backend services with transactions and application-level audit logs; remaining Phase 4+ items remain blueprint-only.
+**Status:** Living workflow specification. M1–M2 workflows are implemented; M3 academic/teaching/attendance workflows and the M4 examinations/results/report-card/transcript backend workflows are implemented as open hardening slices. Workflows are enforced by backend services with transactions and application-level audit logs; remaining Phase 4+ items remain blueprint-only.
 
 ## 1. Admissions & Enrolment (M2 implemented)
 - **States (configurable):** `Enquiry → Application Started → Submitted → Under Review → Assessment/Interview → Approved → Offered → Accepted → Enrolled`; alt: Rejected, Withdrawn, Waitlisted, Deferred.
@@ -38,12 +38,13 @@
 - **Generation:** per term/session for individual or authorized bulk; configurable branded template (school/student identity, subjects/scores/grades/breakdown, attendance summary, remarks/signatures, grading legend, promotion status if applicable, rank if enabled).
 - **Output/controls:** PDF; record generation/publication events; restrict access to authorized users/parent/student.
 
-## 7. Cumulative Transcripts
-- **Source:** approved & published historical results across sessions/terms; preserve grading scheme effective at time earned (no retroactive recalculation under new scales).
-- **Request/issue workflow:** `Requested → Under Review → Approved → Generated → Issued` (corrections via separate authorized process).
-- **Content:** institution/student identity, admission/graduation dates, classes/sessions/terms/subjects/scores/grades, cumulative averages/GPA only if validly defined, status, unique reference, signatory/issue date, verification (QR/secure URL/token).
-- **Rules:** unique reference; printable PDF; record every issuance (by/to/when/purpose); reissue/correction preserves prior issue/version history; provisional labeling or block if incomplete per policy; verification exposes minimal non-sensitive data (no sensitive biodata in QR).
-- **Access:** expiring/access-controlled download links for private documents.
+## 7. Cumulative Transcripts (M4 backend slice implemented; hardening open)
+- **Source:** published historical results across sessions/terms; `build_transcript_snapshot` copies grading-scale grades, component scores, and result metadata at generation time (no retroactive recalculation under later scales).
+- **Request/issue workflow:** `Requested → Under Review → Approved/Rejected → Generated → Issued`; self-approval is denied; issue requires recipient, purpose, and `issue_or_revoke` permission.
+- **Content:** institution/student identity, admission/graduation dates, classes/sessions/terms/subjects/scores/grades, completeness flags, status, unique reference, version/kind, issue date/actor/recipient/purpose, verification path with QR/token.
+- **Rules:** unique institution-scoped reference; private printable PDF; every transition is audited via `TranscriptEvent`; correction creates a new version/token/reference/PDF and marks the prior transcript `SUPERSEDED`; revocation invalidates verification; provisional labeling is used for incomplete records and official generation is blocked by default (`institution.settings.transcript_block_incomplete_official`) unless policy allows it.
+- **Verification:** public `POST /api/v1/transcripts/verify/` hashes the submitted token, records a `TranscriptVerification` outcome (`valid`, `invalid`, `revoked`, `superseded`, `invalid_state`), and returns minimal document status/metadata with no student personal data.
+- **Access:** authenticated private-document download endpoint with RBAC/institution/campus checks; short-lived signed URLs remain a future option.
 
 ## 8. Finance (MVP: Fees, Invoices, Payments)
 - **Setup:** fee categories/schedules by class/campus/session/term; compulsory/optional; discounts/scholarships/bursaries; installments; due dates; authorized waivers/adjustments.

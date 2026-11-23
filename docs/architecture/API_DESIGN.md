@@ -1,6 +1,6 @@
 # API Design
 
-**Status:** Living API design. M1–M3 endpoints and the M4 examinations backend endpoints are implemented and evidenced; remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are implemented but not accepted.
+**Status:** Living API design. M1–M3 endpoints and the M4 examinations/transcript backend endpoints are implemented; transcript endpoints are locally validated and pending CI evidence. Remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are implemented but not accepted.
 **Style:** RESTful JSON APIs (Django REST Framework), versioned, with generated schema at `/api/schema/` and Swagger UI at `/api/docs/`.
 
 ## 1. Conventions
@@ -47,7 +47,7 @@
 | Attendance | `/attendance-sessions`, `/attendance-records`, `/attendance-records/{id}/corrections` | corrections audited |
 | Examinations/Results | `/assessment-schemes`, `/components`, `/grading-scales`, `/results`, `/results/{id}/submit|review|approve|publish`, `/results/{id}/corrections` | scoped to assigned teacher; controlled workflow |
 | Report Cards | `/report-cards/generate`, `/report-cards/{id}` (PDF/download) | approved/published data only; authorized access |
-| Transcripts | `/transcript-requests`, `/transcripts`, `/transcripts/{id}/issue|correct`, `/transcripts/verify/{token}` | verify returns minimal public info |
+| Transcripts | `/transcript-requests`, `/transcripts`, `/transcripts/{id}/issue|correct|revoke|download`, `POST /transcripts/verify/` with `{token}` | verify is public and returns minimal non-student info |
 | Finance | `/fee-categories`, `/fee-schedules`, `/invoices`, `/payments`, `/receipts`, `/adjustments`, `/webhooks/payments/{provider}` | server-verified payments, idempotent, signed webhooks |
 | Inventory/Procurement/Assets | `/items`, `/stores`, `/stock-movements`, `/stock-counts`, `/suppliers`, `/requisitions`, `/purchase-orders`, `/grns`, `/assets`, `/assets/{id}/history` | transactional movements; controlled adjustments |
 | ID Cards | `/id-card-templates`, `/id-cards/generate`, `/id-cards/bulk-generate`, `/id-cards/{id}/approve|issue|revoke|replace`, `/id-cards/verify/{token}` | limited verification response |
@@ -68,8 +68,9 @@
 | Attendance | `/api/v1/attendance-sessions/`, `/api/v1/attendance-sessions/open/`, `/api/v1/attendance-sessions/{id}/mark/`, `/api/v1/attendance-sessions/{id}/expected-students/`, `/api/v1/attendance-sessions/{id}/close/`, `/api/v1/attendance-sessions/{id}/correct/`, `/api/v1/attendance-records/`, `/api/v1/attendance-corrections/` | student offering-based attendance; corrections require reason and privileged grant |
 | Examinations | `/api/v1/examinations/assessment-schemes/`, `/api/v1/examinations/assessment-components/`, `/api/v1/examinations/grading-scales/`, `/api/v1/examinations/results/`, `/api/v1/examinations/results/submit/`, `/api/v1/examinations/results/{id}/return-for-correction|approve|publish|correct/` | configurable assessment/grading, weighted scoring, controlled workflow, correction history |
 | Report cards | `/api/v1/examinations/report-cards/`, `/api/v1/examinations/report-cards/generate/` | published-only snapshots; PDF download not implemented |
+| Transcripts | `/api/v1/transcripts/requests/`, `/api/v1/transcripts/`, `/api/v1/transcripts/requests/{id}/review|approve|reject|generate/`, `/api/v1/transcripts/{id}/issue|correct|revoke|download|verifications/`, `POST /api/v1/transcripts/verify/` | request/issue/correct/revoke workflow; private PDF; public token verification with minimal response |
 
-M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other queryset scoping is service-level/institution-level. M4 includes API role/negative tests for approval/publication; frontend/E2E integration and PDF/download endpoints remain open.
+M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other queryset scoping is service-level/institution-level. M4 includes API role/negative tests for approval/publication and transcript request/generate/issue/download/verification; frontend/E2E integration and report-card PDF/download endpoints remain open.
 
 ## 7. File Uploads & Downloads
 - Multipart uploads with validation (type/size/MIME/extension, safe names); malware-scan hook where available.
@@ -81,5 +82,5 @@ M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other que
 
 ## 9. Documentation & Testing
 - OpenAPI schema is generated at `/api/schema/` with Swagger UI at `/api/docs/`; add examples for critical workflows.
-- M1–M3 have local service/workflow tests; M4 adds service tests plus API role/negative tests for result approval/publication. Frontend/E2E and contract coverage for validation/idempotency remain outstanding.
-- Remaining Phase 4 endpoint paths/names (transcripts, verification, graduation/alumni) are illustrative; finalize during implementation with consistent naming and OpenAPI review.
+- M1–M3 have local service/workflow tests; M4 adds service tests plus API role/negative tests for result approval/publication and transcript permission/PDF/verification workflows. Frontend/E2E and contract coverage for validation/idempotency remain outstanding.
+- Remaining Phase 4 endpoint paths/names (graduation/alumni) are illustrative; finalize during implementation with consistent naming and OpenAPI review.

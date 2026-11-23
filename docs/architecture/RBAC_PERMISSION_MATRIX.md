@@ -1,6 +1,6 @@
 # RBAC Permission Matrix
 
-**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented through the M4 backend slice, with M3 and M4 treated as open hardening slices. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M4 modules; record-level predicates, approval thresholds, role-name alignment, and broader negative API tests remain outstanding.
+**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented through the M4 examinations/transcript backend slices, with M3 and M4 treated as open hardening slices. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M4 modules; record-level predicates, approval thresholds, role-name alignment, and broader negative API tests remain outstanding.
 
 ## 1. Principles
 - **Deny-by-default:** no access unless explicitly granted.
@@ -78,3 +78,6 @@ All require audit records; some require second approver per institution policy (
 - `examinations`: `review` for admins/Academic Head/Examination Officer/Principal-VP; `approve/publish` for admins/Examination Officer/Principal-VP; `delete_or_archive` admin-only.
 - Result services enforce assigned-offering scope for teachers and deny self-approval; corrections require reason and return the record to submitted status for re-approval.
 - API role/negative tests cover teacher denial and Examination Officer approval/publication; parent/student portal views remain unimplemented.
+- `transcripts`: `view/download/print` for admins/Registrar/Academic Head/Examination Officer/Principal-VP; `create` for admins/Registrar/Examination Officer; `update`/correction for admins/Registrar; `review` for admins/Academic Head/Examination Officer/Principal-VP; `approve` for admins/Examination Officer/Principal-VP; `issue_or_revoke` for admins/Registrar/Principal-VP; `delete_or_archive` admin-only.
+- Transcript services enforce institution/campus scope, deny request self-approval, require reasons for rejection/correction/revocation, and preserve prior versions/snapshots; public verification is hash-token-only and returns no student personal data.
+- Transcript API role/negative tests cover teacher denial and registrar request/generate/issue/download plus public verification; parent/student portal views remain unimplemented.

@@ -113,4 +113,19 @@ MODULE_GRANTS = {
         "export": ADMIN_ROLES + ("Registrar/Admissions", "Academic Head", "Examination Officer"),
         "print": ADMIN_ROLES + ("Registrar/Admissions", "Academic Head", "Examination Officer"),
     },
+    "transcripts": {
+        "view": ADMIN_ROLES
+        + ("Registrar/Admissions", "Academic Head", "Examination Officer", "Principal/VP"),
+        "create": ADMIN_ROLES + ("Registrar/Admissions", "Examination Officer"),
+        "update": ADMIN_ROLES + ("Registrar/Admissions",),
+        "delete_or_archive": ADMIN_ROLES,
+        "review": ADMIN_ROLES + ("Academic Head", "Examination Officer", "Principal/VP"),
+        "approve": ADMIN_ROLES + ("Examination Officer", "Principal/VP"),
+        "issue_or_revoke": ADMIN_ROLES + ("Registrar/Admissions", "Principal/VP"),
+        "download": ADMIN_ROLES
+        + ("Registrar/Admissions", "Academic Head", "Examination Officer", "Principal/VP"),
+        "print": ADMIN_ROLES
+        + ("Registrar/Admissions", "Academic Head", "Examination Officer", "Principal/VP"),
+        "export": ADMIN_ROLES + ("Registrar/Admissions", "Principal/VP"),
+    },
 }

@@ -1,6 +1,6 @@
 # Test Strategy
 
-**Status:** Living strategy. Testing is mandatory; M3 (29 tests) and the M4 backend slice (5 additional tests) have local evidence, but M3/M4 acceptance still requires broader API role/negative, frontend, and E2E coverage.
+**Status:** Living strategy. Testing is mandatory; M3 (29 tests), M4 examinations (5 tests), and transcript (5 tests) backend slices have local evidence, but M3/M4 acceptance still requires broader API role/negative, frontend, and E2E coverage.
 
 ## 1. Objectives & Quality Gates
 - Verify correctness of business rules, workflows, calculations, and data integrity.
@@ -17,7 +17,7 @@
 - **Permission & scope tests:** role/scope matrix enforcement, object-level/IDOR cases, cross-institution and cross-campus denial, unauthenticated access.
 - **Data integrity tests:** DB constraints (unique FKs/checks), transactional atomicity, concurrency-sensitive operations (e.g. stock issuance, payment posting).
 - **Integration tests:** module interactions (admissions→student→enrolment, academics→teaching→attendance, teaching→results→report/transcript, PO→GRN→stock/asset, payment verify→receipt/balance).
-- **Current backend evidence (M4):** `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**34 passed**) against PostgreSQL 18; migration application verified. M4 tests cover assessment configuration, weighted scoring/grading, full result workflow, report-card snapshots, self-approval denial, unassigned-teacher denial, correction history, and API role/negative approval/publication checks. M4 commit `3f04813` passed remote CI `45135466158`; M3 acceptance still needs broader API role/negative tests, and M4 frontend/E2E and transcript tests remain open.
+- **Current backend evidence (M4 transcript slice):** `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**39 passed**) against PostgreSQL 18; migration application verified in test DB. M4 examinations tests cover assessment configuration, weighted scoring/grading, full result workflow, report-card snapshots, self-approval denial, unassigned-teacher denial, correction history, and API role/negative approval/publication checks. Transcript tests cover snapshot immutability under later grading-scale edits, private PDF generation, incomplete-record official blocking, issue/download permissions, public verification of valid/invalid/superseded/revoked states, and correction version chain. M4 examinations commit `3f04813` passed remote CI `45135466158`; transcript CI evidence is pending. M3 acceptance still needs broader API role/negative tests, and M4 frontend/E2E and report-card PDF tests remain open.
 
 ### 2.2 Frontend (Vitest/React Testing Library as chosen)
 - Component/unit tests for critical UI logic and rendering states.

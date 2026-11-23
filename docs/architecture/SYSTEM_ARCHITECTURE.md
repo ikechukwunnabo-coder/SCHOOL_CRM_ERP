@@ -1,7 +1,7 @@
 # System Architecture
 
 **Project:** School CRM & ERP Platform  
-**Status:** Living architecture. M1/M2 are accepted; M3 modules and the M4 examinations backend are implemented as open hardening slices; remaining Phase 4+ modules are proposed.
+**Status:** Living architecture. M1/M2 are accepted; M3 modules and the M4 examinations/transcript backend are implemented as open hardening slices; remaining Phase 4+ modules are proposed.
 **Baseline:** Modular monolith, API-first, one institution with multi-campus (future multi-institution ready), integrated CMS.
 
 ## 1. Architectural Style & Principles
@@ -58,8 +58,8 @@
 | `academics` | Academic structure (M3) | sessions/years, terms, class levels/arms, subjects/offerings, class enrolments |
 | `teaching` | Teaching assignments (M3) | effective-dated subject-teacher allocations, roles, timetables/slots with conflict checks |
 | `attendance` | Attendance (M3 student slice) | offering-based student attendance sessions/marks, privileged corrections; staff/summaries pending |
-| `examinations` | Assessment & results (M4 backend slice) | assessment schemes/components, effective-dated grading scales, weighted marks entry/calculation, submission/review/approval/publish workflow, correction history, published-only report-card snapshots; PDF/transcripts pending |
-| `transcripts` | Official transcripts | generation from approved historical results, issuance, versioning, corrections, verification refs |
+| `examinations` | Assessment & results (M4 backend slice) | assessment schemes/components, effective-dated grading scales, weighted marks entry/calculation, submission/review/approval/publish workflow, correction history, published-only report-card snapshots; report-card PDF pending |
+| `transcripts` | Official transcripts (M4 backend slice) | transcript requests/approval, published-result snapshots, provisional/official generation, private PDF storage, issuance, corrections/versioning, revocation, hash-token public verification |
 | `finance` | Fees & payments (MVP) | fee categories/schedules, invoices, payments/allocations, receipts, balances, refunds/reversals; integration point for R2 GL |
 | `inventory` | Stores/stock | item catalogue, stores/locations, stock movements/ledger, counts/reconciliation, alerts |
 | `procurement` | Purchasing | suppliers, requisitions, approvals, POs, GRNs, invoice matching, procurement controls |
@@ -105,12 +105,13 @@
 - M2 admissions/student workflows → guarded services → student conversion/import framework → private document APIs.
 - M3 workflows → academics structure → effective-dated teaching assignments → timetable conflict service → offering-based attendance sessions/corrections.
 - M4 workflows → assessment scheme/grading configuration → assigned-teacher result entry and weighted calculation → submit/return/approve/publish transitions with separation of duties → correction/re-approval history → published-only report-card snapshots.
-- M3/M4 caveats: service-level teacher scope in most modules, hard-coded 40-hour workload cap, draft/versioned timetables without recurrence/publish workflow, PDF/transcript/portal flows pending, application-level audit only.
+- M4 transcript workflows → transcript request/review/approval → published-result/completeness snapshot → private PDF with hash-token QR → issue/download → correction/revocation with supersession → public verification outcome logging.
+- M3/M4 caveats: service-level teacher scope in most modules, hard-coded 40-hour workload cap, draft/versioned timetables without recurrence/publish workflow, report-card PDF and portal flows pending, application-level audit only.
 
 ## 10. Key Cross-Cutting Decisions (pending)
 - Provider selections, storage provider config, and infra sizing (D-012–D-015, D-019).
 - M3 acceptance gates: API role/negative tests, role-name alignment, configurable workload, timetable recurrence/publish policy, teacher attendance, frontend/E2E workflows.
-- M4 acceptance gates: PDF report cards, cumulative transcripts/verification/versioning, graduation→alumni linkage, frontend/E2E workflows, official grading-policy confirmation (Q-003).
+- M4 acceptance gates: PDF report cards, graduation→alumni linkage, frontend/E2E workflows, official grading-policy confirmation (Q-003).
 - Database-level audit immutability and containerized backend/Celery runtime validation.
 
 *This document is living architecture; implemented components are marked above and refined with each phase.*
