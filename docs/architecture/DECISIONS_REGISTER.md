@@ -36,7 +36,7 @@ The following decisions establish the initial project direction and are approved
 
 **Decision:** Python 3.14.x is the approved provisional backend runtime target.
 
-**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`; PostgreSQL 18 runtime, 29 local backend tests at M3). Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
+**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`, `45130273958`; PostgreSQL 18 runtime, 29 backend tests at M3). Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
 
 ### 2.1 Backend technology baseline
 
@@ -589,10 +589,10 @@ No shared production administrator account should be used.
 
 **Scope implemented:** `employees`, `academics`, `teaching`, and `attendance` apps; academic sessions/terms, class levels/arms, subjects/offerings, class enrolments; effective-dated teacher assignments with reassignment history; draft/versioned timetable slots with teacher/class/room conflict checks; student offering-based attendance sessions/marking/corrections with privileged correction policy and application-level audit events; M3 module/verb grants seeded via `0004_seed_phase3_permissions.py`.
 
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (29 tests), and `manage.py migrate` against PostgreSQL 18. Remote CI evidence for the M3 commit is recorded in `README.md` once available.
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (29 tests), and `manage.py migrate` against PostgreSQL 18. M3 commit `d5c293a` passed remote CI run `45130273958` (frontend build/tests and backend lint/checks/migration consistency/tests green).
 
 **Owner:** Product / Engineering
-**Approval:** Not an acceptance decision. Phase 3 remains in hardening; proceed to Phase 4 only after this implementation is committed with passing CI and M3 gaps remain explicitly tracked.
+**Approval:** Not an acceptance decision. The implementation is committed with passing CI; Phase 3 remains in hardening and M3 gaps remain explicitly tracked while Phase 4 proceeds.
 
 ---
 
@@ -715,7 +715,7 @@ Changing an approved decision requires a documented change request and impact as
 | Architecture validation | Blueprint reviewed/documented; to be enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register (subject to ongoing governance) |
 | Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3/M3 academic/teaching slice implemented but not accepted |
-| Testing | 29 backend tests passing locally; remote CI green for Phase 2 closure (`44775171408`), M3 remote CI evidence pending; containerized backend runtime pending |
+| Testing | 29 backend tests passing locally and in M3 CI (`45130273958`); Phase 2 closure CI green (`44775171408`); containerized backend runtime pending |
 
 ---
 

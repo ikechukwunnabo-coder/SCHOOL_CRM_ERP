@@ -37,7 +37,7 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 - Backend: `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**29 tests**: health, auth/audit, RBAC/per-verb grants, institution/campus scoping, admissions workflow, duplicate identity rejection, guardian links, lifecycle transitions, private document upload/download, controlled imports, academic structure, teacher allocations, timetable conflicts, attendance scope/corrections). Validated against PostgreSQL 18.
 - Frontend: `npm run build` pass (`tsc -b && vite build`); `frontend/package-lock.json` committed.
 - Backend dependencies pinned via `backend/requirements.txt` and `backend/requirements-dev.txt` (pip freeze snapshot).
-- Remote CI green (runs `44769870049` for Phase 2 and `44775171408` for Phase 2 closure) on committed frontend + backend artifacts; M3-specific remote CI evidence pending.
+- Remote CI green (runs `44769870049` for Phase 2, `44775171408` for Phase 2 closure, and `45130273958` for M3) on committed frontend + backend artifacts.
 - M3 tests are primarily service-level; API role/negative tests and frontend/E2E workflows remain outstanding.
 - **Not yet validated here:** containerized backend/Celery runtime (Docker Desktop stalls at image export) and Celery/Redis task integration.
 

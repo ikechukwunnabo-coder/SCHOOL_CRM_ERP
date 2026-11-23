@@ -1,7 +1,7 @@
 # Implementation Roadmap
 
 **Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; Phase 3/M3 slice implemented; Phase 3 hardening in progress; M3 not accepted). Sequenced by dependencies and Master Spec Phases 0–7.
-**Last updated:** 2026-11-20
+**Last updated:** 2026-11-23
 
 ## 1. Guiding Approach
 - Complete Phase 0 (this blueprint) with reviews/approvals before broad feature coding.
@@ -33,7 +33,7 @@
 - **Scope:** academic sessions/terms, class levels/arms, subjects/offerings, employee/teacher records (base), subject-teacher allocations (effective-dated/history), draft/versioned timetables with add-slot conflict checks, student offering-based attendance (teacher attendance remains planned).
 - **Milestone M3:** configured structure with valid teacher allocations and timetable conflict checks; attendance marking/corrections audited; teacher scoped to assigned classes/subjects.
 - **Dependencies:** academics/teaching schema, conflict validation services.
-- **Status (2026-11-20):** **M3 slice implemented; not accepted.** Added academic sessions/terms, class levels/arms, subjects/offerings, class enrolments, employee records, effective-dated teacher assignments with reassignment history, draft/versioned timetable slot conflict checks (teacher/class/room), `/teacher-assignments/my-assignments/`, and student offering-based attendance sessions/marking/corrections with audit trail and privileged correction policy. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**29 passed**) against PostgreSQL 18. Remaining M3 hardening: application-level API role/negative tests, role-name alignment, configurable workload policy, timetable recurrence/publish policy, teacher attendance, frontend/E2E workflows.
+- **Status (2026-11-23):** **M3 slice implemented; not accepted.** Added academic sessions/terms, class levels/arms, subjects/offerings, class enrolments, employee records, effective-dated teacher assignments with reassignment history, draft/versioned timetable slot conflict checks (teacher/class/room), `/teacher-assignments/my-assignments/`, and student offering-based attendance sessions/marking/corrections with audit trail and privileged correction policy. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**29 passed**) against PostgreSQL 18; M3 commit `d5c293a` passed remote CI `45130273958`. Remaining M3 hardening: application-level API role/negative tests, role-name alignment, configurable workload policy, timetable recurrence/publish policy, teacher attendance, frontend/E2E workflows.
 
 ### Phase 4 — Examinations & Transcripts (depends on M3)
 - **Scope:** assessment schemes/components, grading scales (effective-dated), result entry/validation, submission→review→approval→publish workflow, corrections/versioning, report cards (PDF), cumulative transcripts (generation/issuance/verification/versioning), graduation→alumni linkage, basic ID cards (if sequenced per MVP).
