@@ -1,7 +1,7 @@
 # System Architecture
 
 **Project:** School CRM & ERP Platform  
-**Status:** Living architecture. M1/M2 are accepted; M3 modules are implemented as an open hardening slice; Phase 4+ modules remain proposed.
+**Status:** Living architecture. M1/M2 are accepted; M3 modules and the M4 examinations backend are implemented as open hardening slices; remaining Phase 4+ modules are proposed.
 **Baseline:** Modular monolith, API-first, one institution with multi-campus (future multi-institution ready), integrated CMS.
 
 ## 1. Architectural Style & Principles
@@ -43,14 +43,14 @@
  - (Future) Biometric, GPS, identity services
 ```
 
-## 3. Backend Application Boundaries (implemented through M3; later modules proposed)
+## 3. Backend Application Boundaries (implemented through the M4 backend slice; later modules proposed)
 
 | App/Module | Ownership (single source of truth) | Key responsibilities |
 |---|---|---|
 | `core` | Shared primitives (M1) | base models, utilities, settings helpers, common validators, ID generation services |
 | `institutions` | Institution & campus (M1) | schools/institutions, campuses, tenant context, institution settings/branding config |
 | `accounts` | User accounts/auth (M1) | user model/profile linkage, session+CSRF auth endpoints, `/me` |
-| `permissions` | RBAC (M1, M2 closure, M3 grants) | roles, permissions, scopes, policy evaluation helpers |
+| `permissions` | RBAC (M1, M2 closure, M3/M4 grants) | roles, permissions, scopes, policy evaluation helpers |
 | `students` | Student identity & lifecycle (M2) | student record, admission number, lifecycle/state transitions, stable identity |
 | `admissions` | Recruitment/admission (M2) | enquiries, applications, decisions, conversion to student (no duplicate identity) |
 | `guardians` | Parent/guardian (M2) | guardian profiles, student-guardian relationships, contact/consent flags |
@@ -58,7 +58,7 @@
 | `academics` | Academic structure (M3) | sessions/years, terms, class levels/arms, subjects/offerings, class enrolments |
 | `teaching` | Teaching assignments (M3) | effective-dated subject-teacher allocations, roles, timetables/slots with conflict checks |
 | `attendance` | Attendance (M3 student slice) | offering-based student attendance sessions/marks, privileged corrections; staff/summaries pending |
-| `examinations` | Assessment & results | assessment config/components, marks entry/validation, calculations, submission/review/approval/publish workflow, result versions |
+| `examinations` | Assessment & results (M4 backend slice) | assessment schemes/components, effective-dated grading scales, weighted marks entry/calculation, submission/review/approval/publish workflow, correction history, published-only report-card snapshots; PDF/transcripts pending |
 | `transcripts` | Official transcripts | generation from approved historical results, issuance, versioning, corrections, verification refs |
 | `finance` | Fees & payments (MVP) | fee categories/schedules, invoices, payments/allocations, receipts, balances, refunds/reversals; integration point for R2 GL |
 | `inventory` | Stores/stock | item catalogue, stores/locations, stock movements/ledger, counts/reconciliation, alerts |
@@ -100,15 +100,17 @@
 - **Containers:** Docker Compose for local dev; production via orchestrated containers/VMs as approved (Nginx reverse proxy → Gunicorn/Django, Celery workers/beat, PostgreSQL, Redis, object storage).
 - **Observability:** structured logs with correlation IDs, error monitoring/alerting, health checks.
 
-## 9. Current implementation flows (M1–M3)
+## 9. Current implementation flows (M1–M4 backend)
 - Auth/session requests → DRF views → `HasModuleVerbPermission`/institution-campus scoping → audited outcomes.
 - M2 admissions/student workflows → guarded services → student conversion/import framework → private document APIs.
 - M3 workflows → academics structure → effective-dated teaching assignments → timetable conflict service → offering-based attendance sessions/corrections.
-- M3 caveats: service-level teacher scope in most modules, hard-coded 40-hour workload cap, draft/versioned timetables without recurrence/publish workflow, application-level audit only.
+- M4 workflows → assessment scheme/grading configuration → assigned-teacher result entry and weighted calculation → submit/return/approve/publish transitions with separation of duties → correction/re-approval history → published-only report-card snapshots.
+- M3/M4 caveats: service-level teacher scope in most modules, hard-coded 40-hour workload cap, draft/versioned timetables without recurrence/publish workflow, PDF/transcript/portal flows pending, application-level audit only.
 
 ## 10. Key Cross-Cutting Decisions (pending)
 - Provider selections, storage provider config, and infra sizing (D-012–D-015, D-019).
 - M3 acceptance gates: API role/negative tests, role-name alignment, configurable workload, timetable recurrence/publish policy, teacher attendance, frontend/E2E workflows.
+- M4 acceptance gates: PDF report cards, cumulative transcripts/verification/versioning, graduation→alumni linkage, frontend/E2E workflows, official grading-policy confirmation (Q-003).
 - Database-level audit immutability and containerized backend/Celery runtime validation.
 
 *This document is living architecture; implemented components are marked above and refined with each phase.*

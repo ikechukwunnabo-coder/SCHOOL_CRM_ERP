@@ -1,6 +1,6 @@
 # RBAC Permission Matrix
 
-**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented and validated through M3, with M3 treated as an open hardening slice. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M3 modules; record-level predicates, approval thresholds, role-name alignment, and negative API tests remain outstanding.
+**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented through the M4 backend slice, with M3 and M4 treated as open hardening slices. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M4 modules; record-level predicates, approval thresholds, role-name alignment, and broader negative API tests remain outstanding.
 
 ## 1. Principles
 - **Deny-by-default:** no access unless explicitly granted.
@@ -30,8 +30,8 @@ Legend: **F**=Full (within scope), **S**=Scoped/limited, **O**=Own/linked only, 
 | Teacher allocations (teaching) — M3 | F | S | S/A | S/A(dept) | R(own class context) | R(own) | R | R | - | R(staff refs) | - | - | - | - |
 | Timetable (draft/versioned slots) — M3 | F | S | S/A | S | R(class) | R(own) | R | R | - | - | - | R(linked) | R(self) | - |
 | Attendance (student offering-based; staff not implemented) — M3 | F | S | S | S | S(class mark/correct*) | S(assigned class/subject mark*) | R | R | - | S(staff) | - | R(linked) | R(self) | - |
-| Assessments/Results (entry/workflow) | F | S | A | A(review scope) | R(class overview) | S(entry/submit for assigned only) | F/A(config/workflow) | R | - | - | - | R(published, linked) | R(published, self) | - |
-| Report cards | F | S | A/publish | R | R(class) | R(assigned) | S(generate/manage per policy) | R | - | - | - | R(published, linked) | R(published, self) | - |
+| Assessments/Results (entry/workflow) — M4 backend | F | S | A | A(review scope) | R(class overview) | S(entry/submit for assigned only) | F/A(config/workflow) | R | - | - | - | R(published, linked; portal pending) | R(published, self; portal pending) | - |
+| Report cards — M4 backend | F | S | A/publish | R | R(class) | R(assigned) | S(generate/manage per policy) | R | - | - | - | R(published, linked; portal pending) | R(published, self; portal pending) | - |
 | Transcripts (official) | F | S | A/issue | R | - | - | S/A(per policy) | S(request/admin) | - | - | - | R/Request*(policy) | R/Request*(policy) | R/Request*(policy) |
 | Finance (fees/invoices/payments/receipts) | F | S | R/A(policy) | - | - | - | - | R | F (post/reconcile; reverse/refund with A) | - | - | R/O(linked) pay/view* | R/O(self)* | - |
 | Inventory/Procurement/Assets (MVP basic assets) | F | S | A | S(dept) | R/request* | R/request* | - | - | S(cost/approve per policy) | - | - | - | - | - |
@@ -72,3 +72,9 @@ All require audit records; some require second approver per institution policy (
 - `teaching`: `view` for admins/Registrar/Academic Head/Teacher; assignment mutations and `approve/publish` for admins/Academic Head.
 - `attendance`: `view/create` for admins/Registrar/Academic Head/Teacher; correction/`update`/`approve` for admins/Academic Head; `export` admin-only; `print` for admins/Registrar/Academic Head/Teacher.
 - Assignment/attendance service methods enforce assigned-class/subject scope, but cross-scope queryset filtering, API role/negative tests, and staff attendance remain open.
+
+## 9. Implemented M4 backend enforcement notes
+- `examinations`: `view` for admins/Registrar/Academic Head/Teacher/Examination Officer/Principal-VP; `create/update/submit` for admins/Academic Head/Teacher/Examination Officer.
+- `examinations`: `review` for admins/Academic Head/Examination Officer/Principal-VP; `approve/publish` for admins/Examination Officer/Principal-VP; `delete_or_archive` admin-only.
+- Result services enforce assigned-offering scope for teachers and deny self-approval; corrections require reason and return the record to submitted status for re-approval.
+- API role/negative tests cover teacher denial and Examination Officer approval/publication; parent/student portal views remain unimplemented.

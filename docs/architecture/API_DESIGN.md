@@ -1,6 +1,6 @@
 # API Design
 
-**Status:** Living API design. M1–M3 endpoints are implemented and evidenced; Phase 4+ groups remain illustrative until coded. M3 is implemented but not accepted.
+**Status:** Living API design. M1–M3 endpoints and the M4 examinations backend endpoints are implemented and evidenced; remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are implemented but not accepted.
 **Style:** RESTful JSON APIs (Django REST Framework), versioned, with generated schema at `/api/schema/` and Swagger UI at `/api/docs/`.
 
 ## 1. Conventions
@@ -56,7 +56,7 @@
 | Reports/Exports | `/reports/*`, `/exports` (async status/download) | scoped, logged; async for large jobs |
 | Audit | `/audit-logs` (read-only, restricted) | immutable |
 
-### 6.1 Implemented endpoints (M1–M3)
+### 6.1 Implemented endpoints (M1–M4 backend)
 | Area | Concrete paths | Notes |
 |---|---|---|
 | Auth/health | `/api/v1/health/`, `/api/v1/auth/csrf|login|logout|me/` | session + CSRF auth; schema/docs at `/api/schema/`, `/api/docs/` |
@@ -66,8 +66,10 @@
 | Academics | `/api/v1/academic-sessions/`, `/api/v1/terms/`, `/api/v1/class-levels/`, `/api/v1/arms/`, `/api/v1/subjects/`, `/api/v1/subject-offerings/`, `/api/v1/class-enrolments/` | M3 structure; standard router CRUD |
 | Teaching | `/api/v1/teacher-assignments/`, `/api/v1/teacher-assignments/my-assignments/`, `/api/v1/teacher-assignments/{id}/reassign/`, `/api/v1/timetables/`, `/api/v1/timetable-slots/`, `/api/v1/timetables/{id}/add-slot/` | effective-dated assignments, reassignment history, draft/versioned timetable conflict checks |
 | Attendance | `/api/v1/attendance-sessions/`, `/api/v1/attendance-sessions/open/`, `/api/v1/attendance-sessions/{id}/mark/`, `/api/v1/attendance-sessions/{id}/expected-students/`, `/api/v1/attendance-sessions/{id}/close/`, `/api/v1/attendance-sessions/{id}/correct/`, `/api/v1/attendance-records/`, `/api/v1/attendance-corrections/` | student offering-based attendance; corrections require reason and privileged grant |
+| Examinations | `/api/v1/examinations/assessment-schemes/`, `/api/v1/examinations/assessment-components/`, `/api/v1/examinations/grading-scales/`, `/api/v1/examinations/results/`, `/api/v1/examinations/results/submit/`, `/api/v1/examinations/results/{id}/return-for-correction|approve|publish|correct/` | configurable assessment/grading, weighted scoring, controlled workflow, correction history |
+| Report cards | `/api/v1/examinations/report-cards/`, `/api/v1/examinations/report-cards/generate/` | published-only snapshots; PDF download not implemented |
 
-M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other queryset scoping is service-level/institution-level. API role/negative tests and frontend/E2E integration remain open.
+M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other queryset scoping is service-level/institution-level. M4 includes API role/negative tests for approval/publication; frontend/E2E integration and PDF/download endpoints remain open.
 
 ## 7. File Uploads & Downloads
 - Multipart uploads with validation (type/size/MIME/extension, safe names); malware-scan hook where available.
@@ -79,5 +81,5 @@ M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other que
 
 ## 9. Documentation & Testing
 - OpenAPI schema is generated at `/api/schema/` with Swagger UI at `/api/docs/`; add examples for critical workflows.
-- M1–M3 have local service/workflow tests; API contract/integration tests for positive and negative authorization, validation, idempotency, and workflow transitions remain outstanding for M3 acceptance.
-- Phase 4+ endpoint paths/names are illustrative; finalize during implementation with consistent naming and OpenAPI review.
+- M1–M3 have local service/workflow tests; M4 adds service tests plus API role/negative tests for result approval/publication. Frontend/E2E and contract coverage for validation/idempotency remain outstanding.
+- Remaining Phase 4 endpoint paths/names (transcripts, verification, graduation/alumni) are illustrative; finalize during implementation with consistent naming and OpenAPI review.

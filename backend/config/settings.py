@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.academics",
     "apps.teaching",
     "apps.attendance",
+    "apps.examinations",
 ]
 
 MIDDLEWARE = [

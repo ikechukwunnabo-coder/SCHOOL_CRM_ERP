@@ -1,6 +1,6 @@
 # Security and Privacy Plan
 
-**Status:** Living plan. M1–M2 controls are implemented; M3 adds RBAC grants, privileged attendance corrections, and application-level audit events, but API role/negative tests, DB-level audit immutability, and production controls remain open.
+**Status:** Living plan. M1–M2 controls are implemented; M3 adds RBAC grants/privileged attendance corrections and M4 adds examinations workflow grants, separation-of-duties checks, and application-level audit events. Broader API role/negative tests, DB-level audit immutability, and production controls remain open.
 
 ## 1. Security Objectives
 - Protect confidentiality, integrity, and availability of student, guardian, staff, medical, academic, and financial data.
@@ -28,6 +28,7 @@
 - Strict institution/campus scoping on every owned record and access path; no reliance on frontend filtering.
 - Segregation-of-duties and (where configured) second approval for sensitive actions (results publish/correction, transcript issue/correction, financial reversals/refunds, permission escalation).
 - **M3 implemented:** deny-by-default module/verb grants for `employees`, `academics`, `teaching`, `attendance`; `my-assignments` and attendance service methods enforce teacher-scoped checks; attendance corrections require reason and privileged approval grants.
+- **M4 implemented:** deny-by-default `examinations` grants; assigned-offering enforcement for teacher result entry; self-approval denial; exam-officer/principal approval and publication grants; reason-required corrections with preserved prior values.
 - **M3 caveat:** most M3 queryset scoping is institution-level + service-level rather than object-level queryset filtering; API role/negative tests and role-name alignment (`Academic Head`/`Teacher` vs matrix roles) remain required before acceptance.
 
 ## 5. Application & API Security
@@ -53,7 +54,7 @@
 ## 8. Audit Logging & Integrity
 - Immutable/tamper-evident audit records for: logins/security events, user/role/permission changes, student/teacher-allocation/attendance/result/report-card/transcript/finance/CMS/export/import sensitive operations (per Master Spec §28).
 - Capture actor, action, target, timestamp, reason (where relevant), safe change summary; restrict read access and prevent ordinary modification/deletion.
-- M3 writes application-level audit events for assignments, timetable slots, attendance marking/closing/corrections; DB-level immutability/tamper-evidence is not implemented.
+- M3 writes application-level audit events for assignments, timetable slots, attendance marking/closing/corrections; M4 writes events for scheme/component/scale configuration, result recording/submission/review/approval/publication/correction, and report-card generation. DB-level immutability/tamper-evidence is not implemented.
 - Official records (results, transcripts, posted finance, IDs) managed via controlled workflows, versioning, and reversals—no silent destructive edits.
 
 ## 9. Dependency, Infrastructure & Operations Security
@@ -64,7 +65,7 @@
 ## 10. Secure SDLC & Verification
 - Security requirements and threat-aware reviews in design (Phase 0 onward).
 - Automated tests: authn/authz positive & negative (incl. cross-tenant/campus/IDOR), workflow/state integrity, input validation, file access controls.
-- Current M3 evidence is 29 backend service/workflow tests; add API role/negative tests for module grants, teacher scope, and privileged attendance corrections before M3 acceptance.
+- Current evidence is 34 backend tests (29 M3 + 5 M4); M4 covers teacher scope and approval/publication API denials. Add broader API role/negative tests for M3 grants and privileged attendance corrections before M3 acceptance.
 - Pre-production: security review, dependency scan, configuration review; periodic reassessment.
 
 ## 11. Open Items (Pending)

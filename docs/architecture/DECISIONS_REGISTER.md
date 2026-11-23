@@ -594,6 +594,17 @@ No shared production administrator account should be used.
 **Owner:** Product / Engineering
 **Approval:** Not an acceptance decision. The implementation is committed with passing CI; Phase 3 remains in hardening and M3 gaps remain explicitly tracked while Phase 4 proceeds.
 
+## D-029 — Phase 4 M4 examinations backend slice (not accepted)
+
+**Decision:** Record the initial Phase 4 Examinations backend slice as implemented for local evidence while keeping M4 **open** until PDF report cards, cumulative transcripts/verification/versioning, graduation→alumni linkage, and frontend/E2E workflows are complete.
+
+**Scope implemented:** `examinations` app; assessment schemes/components; effective-dated grading scales; offering-scoped teacher result entry with weighted scoring; submit/return/approve/publish workflow with self-approval denial; correction records with prior-value preservation and re-approval; published-only report-card snapshots; institution/campus-scoped APIs; module/verb grants seeded via `0005_seed_phase4_permissions.py`; application-level audit events; service and API role/negative tests.
+
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (34 tests) against PostgreSQL 18. Remote CI evidence to be appended after commit/push.
+
+**Owner:** Product / Engineering
+**Approval:** Not an acceptance decision. The backend slice is validated locally; M4 remains open and official grading policy confirmation (Q-003) is still required before transcript/report-card UAT.
+
 ---
 
 # 4. Open Questions Requiring Institutional Input
@@ -706,7 +717,7 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-028 | Approved/recorded for implementation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028 records M3 implemented-but-not-accepted status; provider/school-policy items remain pending) |
+| D-001–D-029 | Approved/recorded for implementation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028 records M3 implemented-but-not-accepted status; D-029 records M4 backend slice implemented-but-not-accepted; provider/school-policy items remain pending) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
@@ -714,17 +725,18 @@ Changing an approved decision requires a documented change request and impact as
 | Infrastructure selection | Pending (Q-005) — targets/approach approved |
 | Architecture validation | Blueprint reviewed/documented; to be enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register (subject to ongoing governance) |
-| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3/M3 academic/teaching slice implemented but not accepted |
-| Testing | 29 backend tests passing locally and in M3 CI (`45130273958`); Phase 2 closure CI green (`44775171408`); containerized backend runtime pending |
+| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3/M3 academic/teaching slice implemented but not accepted; Phase 4/M4 examinations backend slice implemented but not accepted |
+| Testing | 34 backend tests passing locally (29 at M3 plus 5 M4); M3 CI green (`45130273958`); Phase 2 closure CI green (`44775171408`); M4 CI evidence pending; containerized backend runtime pending |
 
 ---
 
 # 9. Phase 0 Readiness Recommendation
 
-**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; Phase 3/M3 slice implemented but not accepted**
+**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; Phase 3/M3 slice implemented but not accepted; Phase 4/M4 backend slice implemented but not accepted**
 
 The project may proceed now with:
 - Continued Phase 3 Academic & Teaching hardening per `IMPLEMENTATION_ROADMAP.md` and D-028: API role/negative tests, role-name alignment, configurable workload policy, timetable publish/recurrence, teacher attendance, and frontend/E2E workflows.
+- Continued Phase 4 Examinations build-out per D-029: PDF report cards, cumulative transcripts/verification/versioning, graduation→alumni linkage, and frontend/E2E workflows.
 - Completion of remaining Phase 1 hardening (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
 - Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.

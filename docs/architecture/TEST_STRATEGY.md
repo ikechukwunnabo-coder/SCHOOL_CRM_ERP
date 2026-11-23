@@ -1,6 +1,6 @@
 # Test Strategy
 
-**Status:** Living strategy. Testing is mandatory; M3 is implemented with 29 local backend tests, but API role/negative, frontend, and E2E coverage remain open before acceptance.
+**Status:** Living strategy. Testing is mandatory; M3 (29 tests) and the M4 backend slice (5 additional tests) have local evidence, but M3/M4 acceptance still requires broader API role/negative, frontend, and E2E coverage.
 
 ## 1. Objectives & Quality Gates
 - Verify correctness of business rules, workflows, calculations, and data integrity.
@@ -17,7 +17,7 @@
 - **Permission & scope tests:** role/scope matrix enforcement, object-level/IDOR cases, cross-institution and cross-campus denial, unauthenticated access.
 - **Data integrity tests:** DB constraints (unique FKs/checks), transactional atomicity, concurrency-sensitive operations (e.g. stock issuance, payment posting).
 - **Integration tests:** module interactions (admissions→student→enrolment, academics→teaching→attendance, teaching→results→report/transcript, PO→GRN→stock/asset, payment verify→receipt/balance).
-- **Current backend evidence (M3):** `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**29 passed**) against PostgreSQL 18; migration application verified. Coverage is mostly service/workflow-level; API role/negative tests are still required for M3 acceptance.
+- **Current backend evidence (M4):** `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**34 passed**) against PostgreSQL 18; migration application verified. M4 tests cover assessment configuration, weighted scoring/grading, full result workflow, report-card snapshots, self-approval denial, unassigned-teacher denial, correction history, and API role/negative approval/publication checks. M3 acceptance still needs broader API role/negative tests; M4 frontend/E2E and transcript tests remain open.
 
 ### 2.2 Frontend (Vitest/React Testing Library as chosen)
 - Component/unit tests for critical UI logic and rendering states.

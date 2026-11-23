@@ -1,6 +1,6 @@
 # Workflow Specifications
 
-**Status:** Living workflow specification. M1–M2 workflows are implemented; M3 academic/teaching/attendance workflows are implemented as an open hardening slice. Workflows are enforced by backend services with transactions and application-level audit logs; Phase 4+ items remain blueprint-only.
+**Status:** Living workflow specification. M1–M2 workflows are implemented; M3 academic/teaching/attendance workflows and the M4 examinations/results/report-card backend workflows are implemented as open hardening slices. Workflows are enforced by backend services with transactions and application-level audit logs; remaining Phase 4+ items remain blueprint-only.
 
 ## 1. Admissions & Enrolment (M2 implemented)
 - **States (configurable):** `Enquiry → Application Started → Submitted → Under Review → Assessment/Interview → Approved → Offered → Accepted → Enrolled`; alt: Rejected, Withdrawn, Waitlisted, Deferred.
@@ -23,17 +23,18 @@
 - **Corrections:** privileged `correct` action requires a reason, stores a separate correction record, and writes application-level audit events.
 - **Scope:** teacher assignment checks are service-level; broader queryset-scope enforcement and API role/negative tests remain open.
 
-## 5. Examinations, Results & Publication
+## 5. Examinations, Results & Publication (M4 backend slice implemented; hardening open)
+- **Implemented backend:** assessment schemes/components with max marks/weights and effective dates; effective-dated grading scales with configurable grade ranges/remarks; offering-scoped result entry with weighted score calculation; `submit`, `return-for-correction`, `approve`, `publish`, and `correct` services; correction history and re-approval; self-approval denial; application-level audit events.
 - **Configuration:** assessment schemes/components (CA/tests/exam/practical etc.), max marks/weights, dates, applicable scope, grading scale effective-dated per level/period. No hardcoded universal structure.
 - **Entry:** assigned subject teacher enters marks (draft/bulk) for assigned scope only; validate ranges/max; detect missing/invalid; prevent duplicates per student/subject/assessment/period unless attempts allowed; record user/timestamps.
 - **Workflow:** `Draft → Submitted → Returned for Correction → Resubmitted → Approved → Published` (stages configurable, permissions/audit enforced).
   - Teachers cannot self-approve unless explicitly permitted.
   - Published/approved results **not** silently edited.
 - **Post-approval correction:** formal correction request → record reason, original vs revised, requester/reviewer/approver/timestamps; recalc totals/grades/positions/report cards via controlled services; preserve prior published versions.
-- **Calculation:** configurable weighting, totals, grade boundaries/descriptions/remarks, averages, ranking/positions (if enabled), promotion eligibility; documented rounding/tie rules.
+- **Calculation:** configurable weighting, totals, grade boundaries/descriptions/remarks, averages, ranking/positions (if enabled), promotion eligibility; documented rounding/tie rules. Current backend implements weighted totals and grade/remark lookup only; ranking and promotion policy remain pending.
 
-## 6. Report Cards
-- **Source:** approved & published results only (never draft/unapproved).
+## 6. Report Cards (M4 backend snapshot implemented; PDF/portals pending)
+- **Source:** approved & published results only (never draft/unapproved). Current backend generates immutable-style JSON snapshots from published results and increments version on regeneration.
 - **Generation:** per term/session for individual or authorized bulk; configurable branded template (school/student identity, subjects/scores/grades/breakdown, attendance summary, remarks/signatures, grading legend, promotion status if applicable, rank if enabled).
 - **Output/controls:** PDF; record generation/publication events; restrict access to authorized users/parent/student.
 

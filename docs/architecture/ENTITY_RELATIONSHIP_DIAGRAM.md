@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance entities are implemented as an open hardening slice; Phase 4+ entities remain blueprint-only.
+**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance entities and the M4 examinations/results/report-card entities are implemented as open hardening slices; remaining Phase 4+ entities are blueprint-only.
 **Notation:** textual ER model (entities, key attributes, relationships). A visual diagram should be produced during implementation (e.g. dbdiagram/ERD tool) once reviewed.
 
 ## 1. Conventions
@@ -62,7 +62,7 @@
 - **AttendanceCorrection** (`attendance_record_id`, previous_status, new_status, reason, corrected_by, corrected_at)
 - Relationships: auditable corrections; summaries/exports and staff attendance remain planned.
 
-### 2.7 Examinations, Results, Report Cards
+### 2.7 Examinations, Results, Report Cards (M4 backend slice implemented)
 - **AssessmentScheme** (`id`, institution_id, level/scope, session/term, effective dates, grading config ref) — preserved historically
 - **AssessmentComponent** (`scheme_id`, type [CA/test/exam/etc], name, max_marks, weight, applicable scope)
 - **GradingScale** (`id`, institution_id, name, effective dates, boundaries/grade/description/remarks/gpa rules as configured)
@@ -70,7 +70,7 @@
 - **ResultWorkflowAction** (`result_record_id` or batch, action, actor_id, timestamp, comments)
 - **ResultCorrection** (`result_record_id`, original_values, revised_values, reason, requester, reviewer, approver, timestamps, prior_version_ref)
 - **ReportCard** (`id`, student_id, session_id, term_id, generated_from published results snapshot/ref, template/version, status, file_ref, generated_at)
-- Relationships: ResultRecord unique per student/subject/assessment/period (unless attempts configured); only approved/published feed report cards; corrections versioned, never silent overwrite.
+- Relationships: ResultRecord unique per student/offering/scheme; ResultWorkflowAction records each transition; ResultCorrection preserves prior scores/total/grade with reason; only published results feed ReportCard JSON snapshots; ranking, attempts, promotion, PDF file refs, and transcript linkage remain pending.
 
 ### 2.8 Transcripts & Alumni
 - **TranscriptRequest** (`id`, student_id, requested_by, purpose, status)
@@ -120,10 +120,11 @@
 - Historical/approved academic & financial records are immutable in effect (version/correct/reverse, never destructive overwrite/delete).
 - Official IDs (admission, employee, invoice, receipt, transcript ref, asset tag, PO/GRN/requisition numbers, etc.) unique per defined scope and immutable once issued except controlled correction.
 
-## 4. Implemented migration evidence (through M3)
+## 4. Implemented migration evidence (through M4 backend)
 - M1: `accounts`, `institutions`, `permissions`, `audit`.
 - M2: `admissions`, `guardians`, `students`, `documents`, `imports`, identifier sequences/lifecycle history.
 - M3: `employees/0001_initial.py`, `academics/0001_initial.py`, `teaching/0001_initial.py`, `attendance/0001_initial.py`, and permission seed `permissions/0004_seed_phase3_permissions.py`.
-- Migration state validated with `manage.py makemigrations --check --dry-run` and `manage.py migrate`; M3 remains open for schema refinements from configurable workload, recurrence/publication, and staff attendance.
+- M4: `examinations/0001_initial.py` and permission seed `permissions/0005_seed_phase4_permissions.py`.
+- Migration state validated with `manage.py makemigrations --check --dry-run` and `pytest -q` against PostgreSQL 18; M3/M4 remain open for schema refinements from workload/recurrence policy, PDF/transcript file refs, and promotion/attempt rules.
 
 *This ER model is a living blueprint refined with migrations; final schema/MRD continues to be validated during implementation.*
