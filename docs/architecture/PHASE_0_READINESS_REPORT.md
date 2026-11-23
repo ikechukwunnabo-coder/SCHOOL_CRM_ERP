@@ -21,7 +21,7 @@ Phase 0 discovery artifacts have been drafted to translate the master specificat
 | 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (D-026); M1–M4 backend enforcement documented, M3/M4 gaps open |
 | 6 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Living (M1–M2 implemented; M3/M4 backend slices open; later phases planned) |
 | 7 | API Design | `docs/architecture/API_DESIGN.md` | Living (M1–M4 backend endpoints concrete; later phases illustrative) |
-| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Validated through M4 backend locally; M3 CI evidence recorded, M4 CI pending |
+| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Validated through M4 backend locally and in remote CI (`45135466158`) |
 | 9 | Integration Specifications | `docs/architecture/INTEGRATION_SPECIFICATIONS.md` | Documented; provider integrations pending |
 | 10 | Security & Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Living (M1–M4 backend controls partial; production controls pending) |
 | 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Living (34 backend tests through M4 backend; API/E2E gaps open) |
@@ -101,6 +101,6 @@ Per `IMPLEMENTATION_ROADMAP.md`: **Phase 0 (done: documented)** → Phase 1 Foun
 - **Documented:** Phase 0 deliverables (13) and readiness report drafted in `docs/architecture/`, with current status notes added as implementation progressed.
 - **Approved:** Baseline decisions D-001–D-021 documented; D-010 validated; D-026 RBAC baseline approved; D-027 Phase 2/M2 closed; D-028/D-029 record M3/M4 as implemented but not accepted.
 - **Implemented:** M1 foundation, M2 student/admissions vertical slice, M3 academic/teaching/attendance slice, and M4 examinations/results/report-card backend slice. M3/M4 remain open for hardening and missing workflows.
-- **Tested:** 34 backend tests pass locally through M4 against PostgreSQL 18; M3 remote CI green (`45130273958`); M4 CI evidence pending after commit/push. Frontend build green; E2E and production runtime validation remain open.
+- **Tested:** 34 backend tests pass locally and in M4 remote CI (`45135466158`) against PostgreSQL 18; M3 remote CI green (`45130273958`). Frontend build green; E2E and production runtime validation remain open.
 
 *Next action:* complete M3/M4 hardening and remaining Phase 4 workflows, then obtain approval at the appropriate milestone gates; keep unresolved provider, school-policy, and infra decisions tracked in `DECISIONS_REGISTER.md`.
