@@ -1,7 +1,7 @@
-# Entity Relationship Diagram (Proposed)
+# Entity Relationship Diagram
 
-**Status:** Draft (documented blueprint, not implemented).  
-**Notation:** textual ER model (entities, key attributes, relationships). A visual diagram should be produced from this during implementation (e.g. dbdiagram/ERD tool) once reviewed.
+**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance entities are implemented as an open hardening slice; Phase 4+ entities remain blueprint-only.
+**Notation:** textual ER model (entities, key attributes, relationships). A visual diagram should be produced during implementation (e.g. dbdiagram/ERD tool) once reviewed.
 
 ## 1. Conventions
 - **Internal PK:** `id` (UUID recommended) for most entities.
@@ -27,7 +27,7 @@
 - **AuditLog** (immutable: `id`, actor_user_id, action, target_type/id, institution_id, campus_id?, timestamp, reason?, change_summary/safe diff metadata)
 - Relationships: User N—M Role via UserRole; Role N—M Permission via RolePermission; actions produce AuditLog.
 
-### 2.3 People: Students, Guardians, Employees
+### 2.3 People: Students, Guardians, Employees (Employees M3)
 - **Student** (`id`, institution_id, campus_id current, admission_number [unique scoped], internal_ref, biodata, photo, status/lifecycle_state, admission_date, current_enrolment refs)
   - **StudentLifecycleHistory** (`student_id`, from_state, to_state, effective_at, reason, actor_id)
   - **StudentDocument** (`student_id`, type, file_ref, metadata, visibility)
@@ -43,7 +43,7 @@
 - **AdmissionDecision** (`application_id`, outcome, decided_by, decided_at, notes)
 - Relationships: Application may convert/link to Student (no duplicate identity); audit on decisions.
 
-### 2.5 Academics & Teaching
+### 2.5 Academics & Teaching (M3 slice implemented)
 - **AcademicSession** (`id`, institution_id, name, start/end, is_current/closed)
 - **Term** (`id`, session_id, name/order, start/end, status)
 - **ClassLevel** (`id`, institution_id/campus scope as configured, name/grade, level band nursery/primary/secondary)
@@ -51,16 +51,16 @@
 - **Subject** (`id`, institution_id, code, name, description, status)
 - **SubjectOffering** (`id`, subject_id, session_id/term_id?, class_level_id, arm_id?, compulsory/optional, effective dates)
 - **ClassEnrolment** (`id`, student_id, session_id, term_id?, class_level_id, arm_id, campus_id, status, effective dates) — historical
-- **Timetable** (`id`, scope session/term/class/arm, effective dates, version/status)
-- **TimetableSlot** (`timetable_id`, day, period, subject_offering_id?, room/venue?, teacher_assignment_id?)
+- **Timetable** (`id`, scope session/term/class/arm, version/status)
+- **TimetableSlot** (`timetable_id`, day, period, subject_offering, room/venue?, employee?, teacher_assignment?)
 - **TeacherAssignment** (`id`, institution_id, campus_id, session_id, term_id?, class_level_id, arm_id, subject_id, employee_id/teacher, role [lead/assistant/substitute], workload/periods, effective_start/end, status, authorized_by)
-- Relationships: Session 1—N Term; ClassLevel 1—N Arm; SubjectOffering links Subject to Class/Arm/period; TeacherAssignment links Employee to Subject/Class/Arm (historical, auditable); conflict checks across slots/assignments.
+- Relationships: Session 1—N Term; ClassLevel 1—N Arm; SubjectOffering links Subject to Class/Arm/period; TeacherAssignment links Employee to Subject/Class/Arm (historical, auditable); draft/versioned timetable slots enforce add-time teacher/class/room conflict checks. Recurrence, publication policy, and configurable workload are still open.
 
-### 2.6 Attendance
-- **AttendanceSession** (`id`, institution_id, campus_id, class/arm, subject_offering_id?, date, period/lesson, type [student/staff])
-- **AttendanceRecord** (`attendance_session_id`, person_id [student/employee], status [present/absent/late/excused/leave], marked_by, marked_at)
+### 2.6 Attendance (M3 student slice implemented)
+- **AttendanceSession** (`id`, institution_id, campus_id, subject_offering, date, status, opened_by/closed_by/timestamps) — staff/period-level sessions not implemented
+- **AttendanceRecord** (`attendance_session_id`, student, status [present/absent/late/excused], marked_by, marked_at)
 - **AttendanceCorrection** (`attendance_record_id`, previous_status, new_status, reason, corrected_by, corrected_at)
-- Relationships: auditable corrections; summaries derived/reportable.
+- Relationships: auditable corrections; summaries/exports and staff attendance remain planned.
 
 ### 2.7 Examinations, Results, Report Cards
 - **AssessmentScheme** (`id`, institution_id, level/scope, session/term, effective dates, grading config ref) — preserved historically
@@ -120,4 +120,10 @@
 - Historical/approved academic & financial records are immutable in effect (version/correct/reverse, never destructive overwrite/delete).
 - Official IDs (admission, employee, invoice, receipt, transcript ref, asset tag, PO/GRN/requisition numbers, etc.) unique per defined scope and immutable once issued except controlled correction.
 
-*This ER model is a proposal for Phase 0 review; final schema/MRD to be validated before migrations.*
+## 4. Implemented migration evidence (through M3)
+- M1: `accounts`, `institutions`, `permissions`, `audit`.
+- M2: `admissions`, `guardians`, `students`, `documents`, `imports`, identifier sequences/lifecycle history.
+- M3: `employees/0001_initial.py`, `academics/0001_initial.py`, `teaching/0001_initial.py`, `attendance/0001_initial.py`, and permission seed `permissions/0004_seed_phase3_permissions.py`.
+- Migration state validated with `manage.py makemigrations --check --dry-run` and `manage.py migrate`; M3 remains open for schema refinements from configurable workload, recurrence/publication, and staff attendance.
+
+*This ER model is a living blueprint refined with migrations; final schema/MRD continues to be validated during implementation.*

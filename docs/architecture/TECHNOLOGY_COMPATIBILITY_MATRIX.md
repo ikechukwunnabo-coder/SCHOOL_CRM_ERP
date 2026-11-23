@@ -1,6 +1,6 @@
 # Technology Compatibility Matrix
 
-**Status:** Scaffold validated (2026-11-20): PostgreSQL 18 container healthy, backend checks/lint/tests passing against PostgreSQL 18, frontend build green in remote CI (run `44761962350`). D-010 confirmed for the committed pins with documented deviations below.
+**Status:** Validated through M3 (2026-11-20): PostgreSQL 18 container healthy, 29 backend tests passing locally, frontend build green in remote CI (Phase 2/closure runs `44769870049`, `44775171408`). D-010 confirmed for committed pins; M3 remote CI evidence pending.
 
 > Per Master Spec: verify official compatibility and security support, pin exact compatible versions, commit lockfiles. Do not blindly install unpinned latest versions.
 
@@ -26,12 +26,13 @@
 | Docker / Compose | Engine + Compose v2 | CLI 29.9.3 required `DOCKER_API_VERSION=1.44` for this Desktop engine | db/redis healthy; frontend image built; backend image export hangs in Docker Desktop | **Partial** |
 
 ## 2. Validation Evidence (2026-11-20)
-- **Backend on PostgreSQL 18:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**15 passed**: health endpoint, CSRF/login/me/logout flow, auth audit events, RBAC helpers/scopes, institution/campus API cross-scope denial, audit redaction). Django applied migrations while creating the test database on PostgreSQL 18.
-- **Containers:** `docker compose up -d db redis` healthy (Postgres 18.7, Redis 8). A native Windows PostgreSQL on host port 5432 shadows the published container port; use the compose network for container-side validation.
+- **Backend on PostgreSQL 18:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**29 passed** at M3: health, auth/audit, RBAC/per-verb grants, institution/campus scoping, admissions, duplicate identity, guardians, lifecycle, private documents, imports, academic structure, teacher allocations, timetable conflicts, attendance scope/corrections).
+- **Migrations:** `python manage.py migrate` applied M1/M2/M3 migrations successfully; `makemigrations --check --dry-run` reports no drift.
+- **Containers:** `docker compose up -d db redis` healthy (Postgres 18.7, Redis 8). Native Windows PostgreSQL on host port 5432 shadows the published port; use the compose network with `DOCKER_API_VERSION=1.44` for container-side validation.
 - **Frontend:** `npm run build` (`tsc -b && vite build`) pass locally and in remote CI on Node 22.
-- **Remote CI:** green (`CI` run `44761962350`, both backend and frontend jobs) against pinned `backend/requirements.txt` and `frontend/package-lock.json`.
-- **Dependencies/locks:** `backend/requirements.txt` and `backend/requirements-dev.txt` pinned (pip freeze); `frontend/package-lock.json` committed. Deviation from the `uv`/`pnpm` target: neither tool is installed in this environment, so pip freeze + npm lock are the committed locks.
-- **Not validated:** backend Docker image export hangs in Docker Desktop; Celery worker and containerized backend runtime not yet exercised.
+- **Remote CI:** green for scaffold (`44761962350`), Phase 2 (`44769870049`), and Phase 2 closure (`44775171408`) against pinned `backend/requirements.txt` and `frontend/package-lock.json`; M3 remote CI pending commit/push.
+- **Dependencies/locks:** `backend/requirements.txt` and `backend/requirements-dev.txt` pinned (pip freeze); `frontend/package-lock.json` committed. Deviation from the `uv`/`pnpm` target: neither tool is installed here, so pip freeze + npm lock are the committed locks.
+- **Not validated:** backend Docker image export hangs in Docker Desktop; Celery worker and containerized backend runtime not exercised.
 
 ## 3. Package & Lockfile Strategy (current)
 - **Backend:** declared in `backend/pyproject.toml`; pinned snapshot committed as `backend/requirements.txt` (+ `backend/requirements-dev.txt`) from scaffold venv. Future: consider compiled/hashed locks and CI drift checks.
@@ -46,7 +47,8 @@
 - [x] Confirm Django 5.2 LTS / Python 3.14 / psycopg 3 compatibility in the executed CI and local PostgreSQL 18 run
 - [ ] Confirm DRF, Celery, Redis client, auth/storage libs compatibility in an integrated Celery/Redis runtime
 - [ ] Validate `docker compose` backend/celery services and containerized workflows (db/redis and frontend image validated)
-- [x] Achieve green CI run on pinned artifacts (`44761962350`)
+- [x] Achieve green CI runs on pinned artifacts (`44761962350`, `44769870049`, `44775171408`)
+- [ ] Achieve green CI run for the M3 commit after push
 - [ ] Review security support/EOL dates and harden pins as needed
 - [ ] Replace pip freeze/npm locks with `uv.lock`/`pnpm-lock.yaml` when those tools are available (D-010 deviation)
 
@@ -56,4 +58,4 @@
 - Lockfile tooling deviates from the approved `uv`/`pnpm` strategy (pip freeze and npm lock committed instead).
 - Provider SDKs (payments/SMS/email/storage) may introduce additional constraints when integrated.
 
-**Decision status:** D-010 **Validated for committed pins** (CI green, PostgreSQL 18 runtime validated). Open follow-ups: containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling.
+**Decision status:** D-010 **Validated for committed pins** (Phase 2/closure CI green, PostgreSQL 18 runtime validated, 29 M3 backend tests local). Open follow-ups: M3 CI evidence, containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling.

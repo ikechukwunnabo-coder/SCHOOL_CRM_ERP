@@ -1,6 +1,6 @@
 # Test Strategy
 
-**Status:** Draft (documented). Testing is mandatory; no feature is complete without implementation and test evidence.
+**Status:** Living strategy. Testing is mandatory; M3 is implemented with 29 local backend tests, but API role/negative, frontend, and E2E coverage remain open before acceptance.
 
 ## 1. Objectives & Quality Gates
 - Verify correctness of business rules, workflows, calculations, and data integrity.
@@ -16,7 +16,8 @@
 - **API tests:** endpoint contracts, serialization, pagination/filtering, validation errors, status codes, idempotency keys/webhook handling (mocked providers).
 - **Permission & scope tests:** role/scope matrix enforcement, object-level/IDOR cases, cross-institution and cross-campus denial, unauthenticated access.
 - **Data integrity tests:** DB constraints (unique FKs/checks), transactional atomicity, concurrency-sensitive operations (e.g. stock issuance, payment posting).
-- **Integration tests:** module interactions (admissions→student→enrolment, teaching→results→report/transcript, PO→GRN→stock/asset, payment verify→receipt/balance).
+- **Integration tests:** module interactions (admissions→student→enrolment, academics→teaching→attendance, teaching→results→report/transcript, PO→GRN→stock/asset, payment verify→receipt/balance).
+- **Current backend evidence (M3):** `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**29 passed**) against PostgreSQL 18; migration application verified. Coverage is mostly service/workflow-level; API role/negative tests are still required for M3 acceptance.
 
 ### 2.2 Frontend (Vitest/React Testing Library as chosen)
 - Component/unit tests for critical UI logic and rendering states.

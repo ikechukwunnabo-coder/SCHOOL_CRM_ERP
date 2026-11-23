@@ -1,6 +1,6 @@
-# Data Dictionary (Initial)
+# Data Dictionary
 
-**Status:** Draft (documented blueprint, not implemented). Representative core entities/fields; to be expanded into a full per-table dictionary during schema design/migration.
+**Status:** Living dictionary. M1/M2 fields and the M3 academic/teaching/attendance slice are implemented in migrations; values below are representative, not exhaustive. Phase 4+ entities remain blueprint-only.
 
 ## 1. Conventions
 - **Types:** `uuid`, `string(n)`, `text`, `int`, `decimal(p,s)`, `bool`, `date`, `datetime(tz)`, `jsonb`, `enum`.
@@ -47,33 +47,32 @@
 |  | status | enum | Y | Enquiry→Submitted→…→Enrolled/Rejected/etc |
 |  | intended_class_id, intended_campus_id | uuid FK | Y | |
 
-### Academics / Teaching
+### Academics / Teaching (M3 implemented slice)
 | Entity | Field | Type | Req | Notes/Validation |
 |---|---|---|---|---|
-| AcademicSession | name, start_date, end_date | string/date | Y | non-overlap rules per institution policy |
-|  | status | enum | Y | open/closed/current |
-| Term | session_id | uuid FK | Y | |
-|  | sequence/name | int/string | Y | |
-| ClassLevel | name/grade | string | Y | level band (nursery/primary/secondary) |
-| Arm | class_level_id | uuid FK | Y | |
-| Subject | code, name | string | Y | unique code scoped |
-| SubjectOffering | subject_id, class_level_id | uuid FK | Y | effective session/term/arm |
-|  | is_compulsory | bool | Y | |
-| TeacherAssignment | employee_id, subject_id, class_level_id, arm_id | uuid FK | Y | core allocation |
-|  | session_id, term_id | uuid FK | Y/N | period relevance |
-|  | role | enum | Y | lead/assistant/substitute |
-|  | effective_start/end | date | Y/N | historical tracking |
-|  | status | enum | Y | active/ended |
-| ClassEnrolment | student_id, session_id, class_level_id, arm_id | uuid FK | Y | historical per period; no overwrite of history |
+| AcademicSession | institution_id, code, name, start_date, end_date | uuid FK/string/date | Y | code unique per institution; end_date >= start_date; campus optional |
+|  | is_closed | bool | Y | current/closure marker; non-overlap policy not yet enforced |
+| Term | session_id, code, name, start_date, end_date | uuid FK/string/date | Y | code unique per session; end_date >= start_date |
+| ClassLevel | institution_id, code, name, sequence | uuid FK/string/int | Y | code unique per institution |
+| Arm | class_level_id, code, name | uuid FK/string | Y | code unique per class level |
+| Subject | institution_id, code, name | uuid FK/string | Y | code unique per institution |
+| SubjectOffering | session_id, term_id, class_level_id, arm_id, subject_id | uuid FK | Y/N | unique scope; term/arm optional |
+|  | is_compulsory | bool | Y | offering flag |
+| ClassEnrolment | session_id, student_id, class_level_id, arm_id, status | uuid FK/enum | Y/N | unique session+student; status active/completed/withdrawn |
+| TeacherAssignment | institution_id, campus_id, session_id, term_id, class_level_id, arm_id, offering_id, employee_id | uuid FK | Y/N | effective-dated allocation |
+|  | role, status | enum | Y | lead/assistant/substitute; active/closed |
+|  | start_date, end_date | date | Y | history preserved on reassignment |
+|  | workload_hours | int | Y | default 0; service currently enforces a hard-coded 40-hour cap (make configurable) |
+| Timetable | session_id, class_level_id, arm_id, name, version, status | uuid FK/string/int/enum | Y | draft/published; version unique per scope |
+| TimetableSlot | timetable_id, day_of_week, period, offering_id, employee_id, room | uuid FK/int/string | Y | add-time conflict checks; one slot per day/period per timetable |
 
-### Attendance
+### Attendance (M3 implemented student slice)
 | Entity | Field | Type | Req | Notes/Validation |
 |---|---|---|---|---|
-| AttendanceSession | date | date | Y | class/arm (+subject/period if lesson-based) |
-|  | type | enum | Y | student/staff |
-| AttendanceRecord | person_id | uuid FK | Y | student or employee |
-|  | status | enum | Y | present/absent/late/excused/leave |
-| AttendanceCorrection | previous_status,new_status | enum | Y | reason required; audited |
+| AttendanceSession | institution_id, campus_id, session_id, term_id, class_level_id, arm_id, offering_id, attendance_date | uuid FK/date | Y/N | unique offering+date; student/subject-offering based |
+|  | status, closed_by | enum/uuid FK | Y/N | open/closed; staff/period sessions not implemented |
+| AttendanceRecord | attendance_session_id, student_id, status, marked_by, marked_at, correction_count | uuid FK/enum/datetime/int | Y | unique session+student; present/absent/late/excused |
+| AttendanceCorrection | record_id, previous_status, new_status, reason, requested_by, approved_by | uuid FK/enum/text/uuid FK | Y | mandatory reason; privileged approval; application-level audit |
 
 ### Examinations / Results / Transcripts
 | Entity | Field | Type | Req | Notes/Validation |
@@ -129,4 +128,4 @@
 - Preserve history: lifecycle events, allocations, attendance corrections, result corrections/versions, transcript issues, asset custody, financial adjustments.
 - Separate public CMS fields/media from confidential ERP records and private documents.
 
-*Expand this dictionary per entity/table during Phase 1 schema design with full constraints, indexes, and enumerations.*
+*Expand this dictionary per entity/table as migrations evolve; M3 refinements needed for configurable workload, timetable recurrence/publication, and staff attendance.*

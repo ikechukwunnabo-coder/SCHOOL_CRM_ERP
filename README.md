@@ -6,7 +6,7 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 **Phase 0 docs:** `docs/architecture/` (decisions, architecture, ERD, RBAC, workflows, API, plans)  
 **Decisions register:** `docs/architecture/DECISIONS_REGISTER.md` (Approved for Phase 1 foundation start, conditional)
 
-> Status: **Phase 2/M2 accepted and closed; Phase 3 in progress.** Documented/approved baselines exist; no feature is considered implemented or tested unless evidenced.
+> Status: **Phase 3/M3 slice implemented; Phase 3 hardening in progress; M3 not accepted/closed.** Documented/approved baselines exist; no feature is considered implemented or tested unless evidenced.
 
 ## Stack (provisional baseline, D-010 — validate in scaffold/CI)
 - **Backend:** Python 3.14.x, Django 5.2 LTS, Django REST Framework, PostgreSQL 18, Redis 8, Celery, Gunicorn
@@ -14,10 +14,10 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 - **Infra:** Docker / Docker Compose, env-based config
 
 ## Repository layout
-- `backend/` — Django + DRF application (`config/`, `apps/core|institutions|accounts|permissions|audit|guardians|admissions|students|imports`)
+- `backend/` — Django + DRF application (`config/`, `apps/core|institutions|accounts|permissions|audit|guardians|admissions|students|imports|employees|academics|teaching|attendance`)
 - `frontend/` — React + TypeScript (Vite) auth/dashboard shell
 - `infrastructure/` — deployment/infra assets
-- `docs/architecture/` — Phase 0/Phase 1 architecture & readiness docs
+- `docs/architecture/` — living architecture/status docs updated through M3
 - `scripts/`, `tests/` — helper and cross-cutting test assets
 - `docker-compose.yml`, `.env.example`, `.github/workflows/ci.yml`
 
@@ -34,17 +34,19 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 4. Frontend: `cd frontend; npm install; npm run dev` (default Vite dev server).
 
 ## Local validation (current evidence)
-- Backend: `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**25 tests**: health, auth/audit, RBAC/per-verb grants, institution/campus scoping, admissions workflow, duplicate identity rejection, guardian links, lifecycle transitions, private document upload/download, controlled imports). Validated against PostgreSQL 18.
+- Backend: `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**29 tests**: health, auth/audit, RBAC/per-verb grants, institution/campus scoping, admissions workflow, duplicate identity rejection, guardian links, lifecycle transitions, private document upload/download, controlled imports, academic structure, teacher allocations, timetable conflicts, attendance scope/corrections). Validated against PostgreSQL 18.
 - Frontend: `npm run build` pass (`tsc -b && vite build`); `frontend/package-lock.json` committed.
 - Backend dependencies pinned via `backend/requirements.txt` and `backend/requirements-dev.txt` (pip freeze snapshot).
-- Remote CI green (run `44769870049`) on the committed Phase 2 artifacts (frontend + backend).
+- Remote CI green (runs `44769870049` for Phase 2 and `44775171408` for Phase 2 closure) on committed frontend + backend artifacts; M3-specific remote CI evidence pending.
+- M3 tests are primarily service-level; API role/negative tests and frontend/E2E workflows remain outstanding.
 - **Not yet validated here:** containerized backend/Celery runtime (Docker Desktop stalls at image export) and Celery/Redis task integration.
 
 ## Current status
 - **Documented/approved:** Phase 0 baselines, D-010 validated, RBAC matrix approved as the MVP authorization baseline (D-026), Phase 2/M2 accepted and Phase 3 authorized (D-027). Q-001–Q-012 tracked (non-blocking for foundation).
 - **Implemented (foundation):** env-driven Django/DRF config, custom `accounts.User` (UUID/email), institutions/campus models, permissions/RBAC models/helpers, audit model/middleware/service (redaction, scope derivation, denial logging), session+CSRF auth endpoints (`/api/v1/auth/csrf|login|logout|me/`), institution/campus-scoped read APIs (`/api/v1/institutions/`, `/api/v1/campuses/`) with deny-by-default RBAC, health endpoint, initial migrations, basic frontend auth shell (login, protected dashboard, `/me` session restore), CI workflow.
 - **Implemented (Phase 2 M2, closed):** guarded identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle history, service-enforced transitions, duplicate-identity prevention, institution/campus-scoped APIs, configurable per-verb grants, private document storage with authenticated download, controlled student-import framework (template/preview/dry-run/errors/approval/atomic apply), audited transitions/denials.
-- **Not complete:** database-level audit immutability, containerized backend/Celery runtime validation, production hardening, provider go-live selections, and Phase 3+ domain modules.
+- **Implemented (Phase 3 M3 slice):** sessions/terms, class levels/arms, subjects/offerings, class enrolments, employee records, effective-dated teacher assignments with reassignment history, timetable conflict checks (teacher/class/room), `/teacher-assignments/my-assignments/`, and student offering-based attendance sessions/marking/corrections with audit trail and privileged correction policy. Teacher scope is enforced in attendance services, not across all M3 querysets.
+- **Not complete:** database-level audit immutability, containerized backend/Celery runtime validation, production hardening, provider go-live selections, M3 API role/negative tests, timetable recurrence/publish policy, teacher attendance, frontend workflows, configurable workload policy, and Phase 4+ domain modules.
 
 ## Governance
 Per `MASTER_CRM_ERP_SCHOOL_PROMPT.md` and `DECISIONS_REGISTER.md`: no hardcoded institution rules, backend-authoritative RBAC, audited sensitive actions, preserve historical/official records. A documented decision is not an implemented/tested system.

@@ -5,7 +5,7 @@
 **Authoritative spec:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md` (1,828 lines)  
 **Phase reference:** `# PHASE 0.md`
 
-> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1 foundation code, migrations and tests now exist. See `README.md`, `IMPLEMENTATION_ROADMAP.md` and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
+> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1/M1 is accepted, Phase 2/M2 is closed, and the Phase 3/M3 academic/teaching slice is implemented but not accepted. See `README.md`, `IMPLEMENTATION_ROADMAP.md`, `DECISIONS_REGISTER.md` (D-026–D-028), and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
 
 ## 1. Executive Summary
 Phase 0 discovery artifacts have been drafted to translate the master specification into an implementation-ready blueprint. Core architecture, domain boundaries, ERD/data dictionary, RBAC, workflows, API conventions, and plans for technology, integrations, security, testing, deployment, and roadmap are documented. However, multiple material decisions require verification/approval and external inputs (versions, auth finalization, providers/credentials, infra, school-specific rules). **Recommendation: CONDITIONAL GO** for Release 1 development, contingent on resolving/approving the gating items in §4 and §6.
@@ -14,19 +14,19 @@ Phase 0 discovery artifacts have been drafted to translate the master specificat
 
 | # | Deliverable | Location | Status |
 |---|---|---|---|
-| 1 | Decisions Register | `docs/architecture/DECISIONS_REGISTER.md` | Drafted (documented) |
-| 2 | System Architecture | `docs/architecture/SYSTEM_ARCHITECTURE.md` | Drafted (documented) |
-| 3 | Entity Relationship Diagram (proposed) | `docs/architecture/ENTITY_RELATIONSHIP_DIAGRAM.md` | Drafted (documented) |
-| 4 | Data Dictionary (initial) | `docs/architecture/DATA_DICTIONARY.md` | Drafted (documented) |
-| 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (2026-11-20; D-026 MVP baseline) |
-| 6 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Drafted (documented) |
-| 7 | API Design | `docs/architecture/API_DESIGN.md` | Drafted (documented) |
-| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Drafted (documented, **unverified**) |
-| 9 | Integration Specifications | `docs/architecture/INTEGRATION_SPECIFICATIONS.md` | Drafted (documented) |
-| 10 | Security & Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Drafted (documented) |
-| 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Drafted (documented) |
-| 12 | Deployment & Operations Plan | `docs/architecture/DEPLOYMENT_AND_OPERATIONS_PLAN.md` | Drafted (documented) |
-| 13 | Implementation Roadmap | `docs/architecture/IMPLEMENTATION_ROADMAP.md` | Drafted (documented) |
+| 1 | Decisions Register | `docs/architecture/DECISIONS_REGISTER.md` | Living (D-026–D-028 recorded) |
+| 2 | System Architecture | `docs/architecture/SYSTEM_ARCHITECTURE.md` | Living (M1–M3 modules documented) |
+| 3 | Entity Relationship Diagram | `docs/architecture/ENTITY_RELATIONSHIP_DIAGRAM.md` | Living (M1–M3 entities implemented; later entities planned) |
+| 4 | Data Dictionary | `docs/architecture/DATA_DICTIONARY.md` | Living (M1–M3 fields representative; later entities planned) |
+| 5 | RBAC Permission Matrix | `docs/architecture/RBAC_PERMISSION_MATRIX.md` | Approved (D-026); M1–M3 enforcement documented, M3 gaps open |
+| 6 | Workflow Specifications | `docs/architecture/WORKFLOW_SPECIFICATIONS.md` | Living (M1–M2 implemented; M3 slice open; later phases planned) |
+| 7 | API Design | `docs/architecture/API_DESIGN.md` | Living (M1–M3 endpoints concrete; later phases illustrative) |
+| 8 | Technology Compatibility Matrix | `docs/architecture/TECHNOLOGY_COMPATIBILITY_MATRIX.md` | Scaffold validated; CI evidence recorded |
+| 9 | Integration Specifications | `docs/architecture/INTEGRATION_SPECIFICATIONS.md` | Documented; provider integrations pending |
+| 10 | Security & Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Living (M1–M3 controls partial; production controls pending) |
+| 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Living (29 backend tests at M3; API/E2E gaps open) |
+| 12 | Deployment & Operations Plan | `docs/architecture/DEPLOYMENT_AND_OPERATIONS_PLAN.md` | Documented; runtime/production validation pending |
+| 13 | Implementation Roadmap | `docs/architecture/IMPLEMENTATION_ROADMAP.md` | Living (M3 implemented, not accepted) |
 
 Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 
@@ -35,18 +35,13 @@ Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 ### 3.1 Baseline documented from Master Spec (Pending Approval)
 - D-001..D-009: v1 scope (Nursery/Primary/Secondary, Nigeria NGN/en-NG/Africa/Lagos), single institution multi-campus (future multi-institution ready), integrated CMS, modular monolith, core stack families, MVP 18-item scope, alumni linkage + cumulative transcripts from approved historical records. *See `DECISIONS_REGISTER.md`.*
 
-### 3.2 Decisions awaiting verification/approval (Pending)
-- **D-010** Exact pinned versions & package/lock strategy (**unverified** compatibility).
-- **D-011** Authentication approach final selection (secure cookie+CSRF recommended).
-- **D-012** Payment gateway(s) & credentials.
-- **D-013** Email/SMS (and later WhatsApp) providers.
-- **D-014** File/object storage & media delivery provider/config.
-- **D-015** Backup & recovery strategy/tooling validation.
-- **D-016** Nigerian grading scales & school calendar (school-specific confirmation).
-- **D-017** Payroll/statutory calculation rules (R2, configurable, expert-reviewed).
-- **D-018** Legacy data migration scope/mappings.
-- **D-019** Infrastructure sizing/hosting & NFR validation.
-- **D-020** Final backend app boundaries/dependency rules.
+### 3.2 Decision status (current)
+- **D-010/D-011/D-020** validated/implemented in M1 with non-blocking follow-ups (lockfile tooling, containerized runtime, dependency map refinement).
+- **D-012/D-013/D-015/D-019** provider/infra-dependent; adapters/mocks and targets approved, production validation pending (Q-001/Q-002/Q-005).
+- **D-014** local private storage/imports implemented in Phase 2 closure; S3-compatible provider config pending.
+- **D-016/D-018** academic rules and import tooling: M3/M2 slices implemented; official school policies and legacy mappings still pending (Q-003/Q-004).
+- **D-017** payroll/statutory calculation rules remain Release 2 and expert-review gated.
+- **D-026** RBAC baseline approved; **D-027** Phase 2/M2 closed; **D-028** Phase 3/M3 implemented but not accepted.
 
 ### 3.3 Open questions requiring management/school input
 - Q-001 Payment gateway/merchant credentials; Q-002 SMS/email providers & sender identities; Q-003 official grading/CA/promotion rules per level; Q-004 legacy data sources/volume; Q-005 hosting/infra/budget; Q-006 institution-specific regulatory/reporting needs.

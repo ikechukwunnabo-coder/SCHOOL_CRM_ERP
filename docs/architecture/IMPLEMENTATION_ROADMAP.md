@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; Phase 3 approved to proceed). Sequenced by dependencies and Master Spec Phases 0–7.
+**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; Phase 3/M3 slice implemented; Phase 3 hardening in progress; M3 not accepted). Sequenced by dependencies and Master Spec Phases 0–7.
 **Last updated:** 2026-11-20
 
 ## 1. Guiding Approach
@@ -14,7 +14,7 @@
 ### Phase 0 — Discovery & Architecture
 - **Deliverables:** 13 architecture docs + readiness report, ERD/data dictionary, RBAC/workflows/API, compatibility/integration/security/test/deployment plans, decisions register.
 - **Exit criteria:** critical conflicts resolved, mandatory decisions approved or explicitly pending with owners, DB/app boundaries reviewed, MVP acceptance criteria agreed.
-- **Gate:** **CONDITIONAL GO** recorded; Phase 1 foundation cleared, M1 accepted and Phase 2 approved to proceed per D-026 in `DECISIONS_REGISTER.md`.
+- **Gate:** **CONDITIONAL GO** recorded; M1 accepted (D-010/D-011/D-020 validated with follow-ups), Phase 2/M2 closed (D-027), and Phase 3/M3 slice implemented but not accepted.
 - **Status:** **Documented/complete for baseline planning.** Formal owner evidence and external inputs (Q-001–Q-012) remain tracked.
 
 ### Phase 1 — Foundation (depends on Phase 0 CONDITIONAL/GO + approved pins/auth)
@@ -27,13 +27,13 @@
 - **Scope:** enquiries, applications, admissions workflow, student profiles, guardian relationships, lifecycle transitions, document management, controlled imports groundwork.
 - **Milestone M2:** enquiry→application→approval→enrolment works end-to-end with unique admission number, no duplicate identity, linked guardians, audited transitions.
 - **Dependencies:** identity/ID generation, file storage (private), RBAC scopes.
-- **Status (2026-11-20):** **M2 accepted and closed (D-027).** Implemented identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle events, service-enforced workflows, duplicate-identity prevention, institution/campus-scoped APIs with module role grants, private document storage/import-validation groundwork, and audited transitions/denials. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**25 passed**) against PostgreSQL 18; remote CI green (`44769870049`) for the M2 slice, with closure commit pending push. Provider-dependent production integrations and containerized backend/Celery runtime validation are tracked hardening items, not M2 blockers.
+- **Status (2026-11-20):** **M2 accepted and closed (D-027).** Implemented identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle events, service-enforced workflows, duplicate-identity prevention, institution/campus-scoped APIs with module role grants, private document storage/import-validation groundwork, and audited transitions/denials. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**25 passed**) against PostgreSQL 18; remote CI green (`44769870049`) for the M2 slice and (`44775171408`) for closure commit `5bea736`. Provider-dependent production integrations and containerized backend/Celery runtime validation are tracked hardening items, not M2 blockers.
 
 ### Phase 3 — Academic & Teaching (depends on M2)
-- **Scope:** academic sessions/terms, classes/arms, subjects/offerings, employee/teacher records (base), subject-teacher allocations (effective-dated/history), timetables, attendance (student/teacher).
+- **Scope:** academic sessions/terms, class levels/arms, subjects/offerings, employee/teacher records (base), subject-teacher allocations (effective-dated/history), draft/versioned timetables with add-slot conflict checks, student offering-based attendance (teacher attendance remains planned).
 - **Milestone M3:** configured structure with valid teacher allocations and timetable conflict checks; attendance marking/corrections audited; teacher scoped to assigned classes/subjects.
 - **Dependencies:** academics/teaching schema, conflict validation services.
-- **Status (2026-11-20):** **Approved to proceed (D-027).** Begin with academic structure (sessions/terms, classes/arms) and subject/teacher foundations, then allocations, timetable conflict checks, and audited attendance.
+- **Status (2026-11-20):** **M3 slice implemented; not accepted.** Added academic sessions/terms, class levels/arms, subjects/offerings, class enrolments, employee records, effective-dated teacher assignments with reassignment history, draft/versioned timetable slot conflict checks (teacher/class/room), `/teacher-assignments/my-assignments/`, and student offering-based attendance sessions/marking/corrections with audit trail and privileged correction policy. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**29 passed**) against PostgreSQL 18. Remaining M3 hardening: application-level API role/negative tests, role-name alignment, configurable workload policy, timetable recurrence/publish policy, teacher attendance, frontend/E2E workflows.
 
 ### Phase 4 — Examinations & Transcripts (depends on M3)
 - **Scope:** assessment schemes/components, grading scales (effective-dated), result entry/validation, submission→review→approval→publish workflow, corrections/versioning, report cards (PDF), cumulative transcripts (generation/issuance/verification/versioning), graduation→alumni linkage, basic ID cards (if sequenced per MVP).
@@ -56,7 +56,7 @@
 - **Gate:** production release approval.
 
 ## 3. Cross-Cutting (throughout)
-- RBAC/audit enforced per feature; migrations reviewed; tests (unit/integration/permission/E2E) added continuously; OpenAPI/docs updated; no hardcoded institution rules.
+- RBAC/audit enforced per feature; migrations reviewed; tests (unit/integration/permission/E2E) added continuously; OpenAPI schema is wired and M1–M3 endpoint documentation is concrete in `API_DESIGN.md`; later domains remain illustrative; no hardcoded institution rules.
 - Minimal environment-validation scaffold allowed early but must not bypass Phase 0 gates.
 
 ## 4. Release 2 / 3 (post-MVP, separate planning)
@@ -71,6 +71,8 @@
 | Auth choice & version pinning | Security/compatibility | Verify and decide before M1 |
 | Provider credentials (payment/SMS/email) | E2E payment/notification validation | Adapter + sandbox/mock; integrate when available |
 | Complex domain rules (grading/transcripts/finance) | Correctness/audit risk | Configurable rules, controlled services, strong tests |
+| M3 role-name mismatch and hard-coded 40-hour workload cap | Authorization/policy drift | Align role names with RBAC matrix; make limit configurable before M3 acceptance |
+| M3 API role/negative and E2E test gaps | Acceptance risk | Add service + API tests for grants, conflicts, cross-scope denial, and frontend journeys before M3 acceptance |
 | Data migration quality | Go-live integrity | Dry-run, validation, reconciliation, audit |
 
 ## 6. MVP Acceptance Alignment

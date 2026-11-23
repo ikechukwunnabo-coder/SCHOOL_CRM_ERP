@@ -1,7 +1,7 @@
 # API Design
 
-**Status:** Draft (documented, not implemented).  
-**Style:** RESTful JSON APIs (Django REST Framework), versioned, documented via OpenAPI (drf-spectacular or equivalent).
+**Status:** Living API design. M1–M3 endpoints are implemented and evidenced; Phase 4+ groups remain illustrative until coded. M3 is implemented but not accepted.
+**Style:** RESTful JSON APIs (Django REST Framework), versioned, with generated schema at `/api/schema/` and Swagger UI at `/api/docs/`.
 
 ## 1. Conventions
 - **Base path & versioning:** `/api/v1/` (versioned to allow evolution). Public CMS read endpoints may be namespaced (e.g. `/api/v1/public/`) and strictly limited to published content.
@@ -56,6 +56,19 @@
 | Reports/Exports | `/reports/*`, `/exports` (async status/download) | scoped, logged; async for large jobs |
 | Audit | `/audit-logs` (read-only, restricted) | immutable |
 
+### 6.1 Implemented endpoints (M1–M3)
+| Area | Concrete paths | Notes |
+|---|---|---|
+| Auth/health | `/api/v1/health/`, `/api/v1/auth/csrf|login|logout|me/` | session + CSRF auth; schema/docs at `/api/schema/`, `/api/docs/` |
+| Institutions | `/api/v1/institutions/`, `/api/v1/campuses/` | institution/campus scoped reads |
+| Admissions/students/imports | `/api/v1/admissions/...`, `/api/v1/students/...`, `/api/v1/imports/...` | M2 workflow and controlled import endpoints |
+| Employees | `/api/v1/employees/` | M3 employee records |
+| Academics | `/api/v1/academic-sessions/`, `/api/v1/terms/`, `/api/v1/class-levels/`, `/api/v1/arms/`, `/api/v1/subjects/`, `/api/v1/subject-offerings/`, `/api/v1/class-enrolments/` | M3 structure; standard router CRUD |
+| Teaching | `/api/v1/teacher-assignments/`, `/api/v1/teacher-assignments/my-assignments/`, `/api/v1/teacher-assignments/{id}/reassign/`, `/api/v1/timetables/`, `/api/v1/timetable-slots/`, `/api/v1/timetables/{id}/add-slot/` | effective-dated assignments, reassignment history, draft/versioned timetable conflict checks |
+| Attendance | `/api/v1/attendance-sessions/`, `/api/v1/attendance-sessions/open/`, `/api/v1/attendance-sessions/{id}/mark/`, `/api/v1/attendance-sessions/{id}/expected-students/`, `/api/v1/attendance-sessions/{id}/close/`, `/api/v1/attendance-sessions/{id}/correct/`, `/api/v1/attendance-records/`, `/api/v1/attendance-corrections/` | student offering-based attendance; corrections require reason and privileged grant |
+
+M3 caveats: `my-assignments` is the only teacher-scoped list endpoint; other queryset scoping is service-level/institution-level. API role/negative tests and frontend/E2E integration remain open.
+
 ## 7. File Uploads & Downloads
 - Multipart uploads with validation (type/size/MIME/extension, safe names); malware-scan hook where available.
 - Private documents served via authenticated endpoint or short-lived signed URLs after authorization check; public CMS media via controlled public storage/CDN paths only.
@@ -65,7 +78,6 @@
 - Webhooks: verify signatures, enforce idempotency, record events, reconcile asynchronously; return fast 2xx on accepted valid events.
 
 ## 9. Documentation & Testing
-- OpenAPI schema generated and versioned; examples for critical workflows.
-- Contract/integration tests for authz (positive/negative), validation, idempotency, and workflow transitions.
-
-*Endpoint paths/names are illustrative; finalize during implementation with consistent naming and OpenAPI review.*
+- OpenAPI schema is generated at `/api/schema/` with Swagger UI at `/api/docs/`; add examples for critical workflows.
+- M1–M3 have local service/workflow tests; API contract/integration tests for positive and negative authorization, validation, idempotency, and workflow transitions remain outstanding for M3 acceptance.
+- Phase 4+ endpoint paths/names are illustrative; finalize during implementation with consistent naming and OpenAPI review.

@@ -1,27 +1,27 @@
 # Workflow Specifications
 
-**Status:** Draft (documented, not implemented). Workflows must be enforced by backend services/state machines with transactions and audit logs.
+**Status:** Living workflow specification. M1–M2 workflows are implemented; M3 academic/teaching/attendance workflows are implemented as an open hardening slice. Workflows are enforced by backend services with transactions and application-level audit logs; Phase 4+ items remain blueprint-only.
 
-## 1. Admissions & Enrolment
+## 1. Admissions & Enrolment (M2 implemented)
 - **States (configurable):** `Enquiry → Application Started → Submitted → Under Review → Assessment/Interview → Approved → Offered → Accepted → Enrolled`; alt: Rejected, Withdrawn, Waitlisted, Deferred.
 - **Key steps:** capture enquiry/applicant & guardian info; configurable form/checklist; document upload/review; decision & approval record; offer/acceptance tracking.
 - **Conversion:** accepted applicant → create/link **Student** without duplicate identity; generate admission number (configurable pattern, DB-unique scoped).
 - **Controls:** validate transitions; audit who/when/why; permissions per admissions roles.
 
-## 2. Student Lifecycle
+## 2. Student Lifecycle (M2 implemented)
 - **States:** `Applicant → Admitted → Enrolled → Active → Promoted / Repeated / Transferred / Withdrawn / Graduated` (+ Alumni linkage).
 - **Transitions:** promotion (individual/batch), repetition, transfer (campus/class/arm), withdrawal, graduation, re-admission (preserve original identity/history; new enrolment period as appropriate).
 - **Rules:** no deletion of academic/financial history; record actor/effective date/reason; withdrawal does not erase obligations; graduation preserves complete academic record and triggers/links AlumniProfile (no duplicate person).
 
-## 3. Subject–Teacher Allocation & Teaching
-- **Setup:** admin configures subjects/offerings per class/arm/session/term; creates TeacherAssignment (employee, subject, class, arm, session/term, role lead/assistant/substitute, workload, effective dates, status).
-- **Validations:** detect timetable/teacher/class/room conflicts and workload limits (configurable); support reassignment/substitution with history.
-- **Authority:** subject teacher acts only on assigned scopes; class teacher has class overview (not blanket mark-edit rights) unless separately authorized. All allocation changes audited.
+## 3. Subject–Teacher Allocation & Teaching (M3 slice implemented; hardening open)
+- **Setup:** admin configures academic sessions/terms, class levels/arms, subjects/offerings, class enrolments, and effective-dated teacher assignments.
+- **Validations:** timetable creation and `add-slot` reject teacher/class/room conflicts for the same session/term/day/period; reassignment preserves history. Workload is currently a hard-coded 40-hour cap and must become configurable before M3 acceptance.
+- **Authority:** `my-assignments` returns the acting teacher's assignments; assignment and audit service methods use teacher scope. Recurring timetable rules, publish/version approval, and API-level cross-scope denial tests are not yet implemented.
 
-## 4. Attendance
-- **Capture:** daily and/or lesson/period-based; by class/arm (and subject/period if configured); statuses present/absent/late/excused/approved leave.
-- **Corrections:** authorized correction with mandatory reason; preserve previous value; audit actor/time.
-- **Outputs:** summaries by student/class/term/session; notifications per config; reports/export. (Biometric integration deferred.)
+## 4. Attendance (M3 slice implemented; hardening open)
+- **Capture:** implemented student attendance sessions tied to a subject offering and date, with `open`, `expected-students`, `mark`, and `close` actions; statuses present/absent/late/excused. Period-level capture, teacher attendance, notifications, and summaries/exports remain planned.
+- **Corrections:** privileged `correct` action requires a reason, stores a separate correction record, and writes application-level audit events.
+- **Scope:** teacher assignment checks are service-level; broader queryset-scope enforcement and API role/negative tests remain open.
 
 ## 5. Examinations, Results & Publication
 - **Configuration:** assessment schemes/components (CA/tests/exam/practical etc.), max marks/weights, dates, applicable scope, grading scale effective-dated per level/period. No hardcoded universal structure.

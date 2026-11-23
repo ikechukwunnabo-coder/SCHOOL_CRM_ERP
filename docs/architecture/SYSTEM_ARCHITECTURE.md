@@ -1,7 +1,7 @@
 # System Architecture
 
 **Project:** School CRM & ERP Platform  
-**Status:** Draft (documented, not implemented/tested)  
+**Status:** Living architecture. M1/M2 are accepted; M3 modules are implemented as an open hardening slice; Phase 4+ modules remain proposed.
 **Baseline:** Modular monolith, API-first, one institution with multi-campus (future multi-institution ready), integrated CMS.
 
 ## 1. Architectural Style & Principles
@@ -43,21 +43,21 @@
  - (Future) Biometric, GPS, identity services
 ```
 
-## 3. Backend Application Boundaries (proposed, to be finalized in review)
+## 3. Backend Application Boundaries (implemented through M3; later modules proposed)
 
 | App/Module | Ownership (single source of truth) | Key responsibilities |
 |---|---|---|
-| `core` | Shared primitives | base models, utilities, settings helpers, common validators, ID generation services |
-| `institutions` | Institution & campus | schools/institutions, campuses, tenant context, institution settings/branding config |
-| `accounts` | User accounts/auth | user model/profile linkage, auth flows, password reset, sessions/tokens |
-| `permissions` | RBAC | roles, permissions, scopes, policy evaluation helpers |
-| `students` | Student identity & lifecycle | student record, admission number, enrolment, lifecycle/state transitions, stable identity |
-| `admissions` | Recruitment/admission | enquiries, applications, decisions, onboarding, conversion to student (no duplicate identity) |
-| `guardians` | Parent/guardian | guardian profiles, student-guardian relationships, contact/consent/portal access flags |
-| `employees` | Staff identity/HR base | staff records, employee numbers, departments/job titles, employment status (payroll R2) |
-| `academics` | Academic structure | sessions/years, terms, classes/grades, arms, subjects, curriculum/offerings, calendar |
-| `teaching` | Teaching assignments | subject-teacher-class allocations, roles (lead/assistant/substitute), effective dates, workload/history |
-| `attendance` | Attendance | student/staff attendance sessions/marks, corrections, summaries (lesson/daily) |
+| `core` | Shared primitives (M1) | base models, utilities, settings helpers, common validators, ID generation services |
+| `institutions` | Institution & campus (M1) | schools/institutions, campuses, tenant context, institution settings/branding config |
+| `accounts` | User accounts/auth (M1) | user model/profile linkage, session+CSRF auth endpoints, `/me` |
+| `permissions` | RBAC (M1, M2 closure, M3 grants) | roles, permissions, scopes, policy evaluation helpers |
+| `students` | Student identity & lifecycle (M2) | student record, admission number, lifecycle/state transitions, stable identity |
+| `admissions` | Recruitment/admission (M2) | enquiries, applications, decisions, conversion to student (no duplicate identity) |
+| `guardians` | Parent/guardian (M2) | guardian profiles, student-guardian relationships, contact/consent flags |
+| `employees` | Staff identity/HR base (M3) | staff records, employee numbers, departments/job titles, employment status (payroll R2) |
+| `academics` | Academic structure (M3) | sessions/years, terms, class levels/arms, subjects/offerings, class enrolments |
+| `teaching` | Teaching assignments (M3) | effective-dated subject-teacher allocations, roles, timetables/slots with conflict checks |
+| `attendance` | Attendance (M3 student slice) | offering-based student attendance sessions/marks, privileged corrections; staff/summaries pending |
 | `examinations` | Assessment & results | assessment config/components, marks entry/validation, calculations, submission/review/approval/publish workflow, result versions |
 | `transcripts` | Official transcripts | generation from approved historical results, issuance, versioning, corrections, verification refs |
 | `finance` | Fees & payments (MVP) | fee categories/schedules, invoices, payments/allocations, receipts, balances, refunds/reversals; integration point for R2 GL |
@@ -100,9 +100,15 @@
 - **Containers:** Docker Compose for local dev; production via orchestrated containers/VMs as approved (Nginx reverse proxy → Gunicorn/Django, Celery workers/beat, PostgreSQL, Redis, object storage).
 - **Observability:** structured logs with correlation IDs, error monitoring/alerting, health checks.
 
-## 9. Key Cross-Cutting Decisions (pending)
-- Final auth mechanism choice and token/session lifecycle (D-011).
-- Final pinned version matrix and package managers (D-010).
-- Provider selections and infra sizing (D-012–D-015, D-019).
+## 9. Current implementation flows (M1–M3)
+- Auth/session requests → DRF views → `HasModuleVerbPermission`/institution-campus scoping → audited outcomes.
+- M2 admissions/student workflows → guarded services → student conversion/import framework → private document APIs.
+- M3 workflows → academics structure → effective-dated teaching assignments → timetable conflict service → offering-based attendance sessions/corrections.
+- M3 caveats: service-level teacher scope in most modules, hard-coded 40-hour workload cap, draft/versioned timetables without recurrence/publish workflow, application-level audit only.
 
-*This document is a blueprint for review; no components above are implemented.*
+## 10. Key Cross-Cutting Decisions (pending)
+- Provider selections, storage provider config, and infra sizing (D-012–D-015, D-019).
+- M3 acceptance gates: API role/negative tests, role-name alignment, configurable workload, timetable recurrence/publish policy, teacher attendance, frontend/E2E workflows.
+- Database-level audit immutability and containerized backend/Celery runtime validation.
+
+*This document is living architecture; implemented components are marked above and refined with each phase.*

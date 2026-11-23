@@ -1,14 +1,14 @@
 # DECISIONS REGISTER
 ## School CRM & ERP Platform
 
-**Phase:** 0 — Discovery, Architecture & Implementation Readiness  
-**Document status:** Approved for Phase 1 foundation start (conditional) — documented and cleared for implementation to proceed as specified  
+**Phase:** Living implementation governance (Phase 0 baseline through Phase 3 hardening)
+**Document status:** Approved for implementation (conditional) — M1 accepted, Phase 2/M2 closed, Phase 3/M3 slice implemented but not accepted
 **Authoritative specification:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`  
 **Revision date:** 20 November 2026  
 **Primary backend runtime:** Python 3.14.x (D-010 validated in Phase 1 scaffold/CI on 2026-11-20)  
 **Architecture:** Modular monolith, API-first
 
-> **Governance statement:** This register records decisions and approaches cleared for implementation start. Approval of an architectural approach does **not** mean implementation, compatibility verification, or production acceptance is complete. No feature is considered implemented or tested merely because it appears in this document. Provisional items (especially D-010) must be validated during Phase 1 (scaffold/CI). External inputs (Q-001–Q-012) remain tracked and must be resolved before affected milestones, UAT, and production go-live.
+> **Governance statement:** This register records decisions and approaches cleared for implementation. Approval of an architectural approach does **not** mean implementation, compatibility verification, or production acceptance is complete. No feature is considered implemented or tested merely because it appears in this document. D-010 was validated in Phase 1/CI with non-blocking follow-ups; external inputs (Q-001–Q-012) remain tracked and must be resolved before affected milestones, UAT, and production go-live.
 
 ---
 
@@ -36,7 +36,7 @@ The following decisions establish the initial project direction and are approved
 
 **Decision:** Python 3.14.x is the approved provisional backend runtime target.
 
-**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI run `44761962350`, PostgreSQL 18 runtime). Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
+**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`; PostgreSQL 18 runtime, 29 local backend tests at M3). Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
 
 ### 2.1 Backend technology baseline
 
@@ -280,7 +280,7 @@ Requirements:
 Student records, employee records, transcripts, financial documents and other confidential files must never be exposed through unrestricted public storage URLs.
 
 **Owner:** DevOps / Security  
-**Approval:** Approved for implementation (local dev + S3-compatible prod with separated private/public). Specific provider/bucket configuration aligned to infrastructure (Q-005/D-019).
+**Approval:** Approved for implementation (local dev + S3-compatible prod with separated private/public). Phase 2 closure implemented local private document storage with authenticated download; S3-compatible provider/bucket configuration remains aligned to infrastructure (Q-005/D-019).
 
 ## D-015 — Backup and disaster recovery
 
@@ -323,7 +323,7 @@ WAEC and NECO-related structures must be configurable where required. Do not ass
 **Interim for implementation:** fully configurable/effective-dated structures with placeholder/default seed data only until school confirmation (Q-003). No hardcoded statutory rules.
 
 **Owner:** Academic Management / Product  
-**Approval:** Approved approach for implementation. Official school policies pending confirmation (Q-003); non-blocking for Phase 1 foundation, required before results/transcript UAT and go-live.
+**Approval:** Approved approach for implementation. M3 added configurable session/term structures but retained a hard-coded 40-hour teacher workload cap for the initial slice; replace with school-configurable policy before M3 acceptance. Official grading/calendar policies remain pending (Q-003), required before results/transcript UAT and go-live.
 
 ## D-017 — Payroll and statutory calculations
 
@@ -375,7 +375,7 @@ Potential datasets:
 - Alumni.
 
 **Owner:** Product / Data / School Administration  
-**Approval:** Approved approach for implementation (import tooling per spec). Source datasets and migration scope pending (Q-004); non-blocking for Phase 1 foundation, required before any production migration.
+**Approval:** Approved approach for implementation. Phase 2 closure implemented the controlled student-import framework (template, preview, dry-run, error report, approval, atomic apply); source datasets/migration scope remain pending (Q-004) and are required before any production migration.
 
 ## D-019 — Infrastructure sizing and performance
 
@@ -406,21 +406,21 @@ Hosting options must be evaluated against management budget, availability, secur
 
 **Decision:** Use clearly separated Django applications with documented ownership.
 
-Proposed application boundaries:
+Application boundaries (implemented apps marked in Phase 1/M1, Phase 2/M2, or Phase 3/M3; remaining apps proposed):
 
 | Application | Responsibility |
 |---|---|
-| `core` | Shared utilities, base models and common infrastructure |
-| `institutions` | Institution, campus and institutional configuration |
-| `accounts` | User accounts and authentication |
-| `permissions` | Roles, permissions and access policies |
-| `students` | Student profiles and lifecycle records |
-| `admissions` | Enquiries, applications and admissions |
-| `guardians` | Guardian profiles and student relationships |
-| `employees` | Staff and employee records |
-| `academics` | Academic sessions, terms, levels, classes, arms and subjects |
-| `teaching` | Subject-teacher allocations, workload and teaching assignments |
-| `attendance` | Student and staff attendance |
+| `core` | Shared utilities, base models and common infrastructure (M1 foundation) |
+| `institutions` | Institution, campus and institutional configuration (M1 foundation) |
+| `accounts` | User accounts and authentication (M1 foundation) |
+| `permissions` | Roles, permissions and access policies (M1 foundation; per-verb grants in Phase 2 closure; M3 grants added) |
+| `students` | Student profiles and lifecycle records (M2) |
+| `admissions` | Enquiries, applications and admissions (M2) |
+| `guardians` | Guardian profiles and student relationships (M2) |
+| `employees` | Staff and employee records (M3 slice) |
+| `academics` | Academic sessions, terms, class levels/arms and subjects/offerings (M3 slice) |
+| `teaching` | Effective-dated subject-teacher allocations and timetable conflicts (M3 slice) |
+| `attendance` | Student offering-based attendance; staff attendance still proposed (M3 slice) |
 | `examinations` | Assessments, marks, results and approval workflows |
 | `transcripts` | Cumulative transcript generation and verification |
 | `identity_cards` | Student and staff identity cards |
@@ -449,7 +449,7 @@ Architecture rules:
 10. Finance and future general-ledger functionality must integrate through documented financial services.
 
 **Owner:** Architecture  
-**Approval:** Approved for implementation. Finalize and refine dependency map during implementation and code review.
+**Approval:** Approved for implementation. Dependency map refined through M3: `academics` owns structure, `teaching` owns effective-dated assignments/timetable checks, `attendance` consumes offering/enrolment data; further refinement continues in Phase 4+ code review.
 
 ---
 
@@ -578,10 +578,21 @@ No shared production administrator account should be used.
 
 **Decision:** Accept the Phase 2 Student & Admissions vertical slice as meeting milestone M2 once remote CI is green, and authorize Phase 3 Academic & Teaching implementation. Closure includes the Phase 2 residual items: private document storage groundwork, controlled-import validation groundwork, module-level per-verb RBAC enforcement and negative authorization tests.
 
-**Evidence:** Commit `e379bef`, remote CI run `44769870049` (frontend and backend green), local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (25 tests) against PostgreSQL 18.
+**Evidence:** M2 slice commit `e379bef` / remote CI `44769870049` and closure commit `5bea736` / remote CI `44775171408` (frontend and backend green), local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (25 tests at closure) against PostgreSQL 18.
 
 **Owner:** Product / School Management  
 **Approval:** Approved on 2026-11-20; permission granted to close Phase 2 and proceed to Phase 3 (Academic & Teaching). Provider-dependent production integrations and containerized backend/Celery runtime validation remain tracked hardening items and do not block M3.
+
+## D-028 — Phase 3 M3 implementation status (not accepted)
+
+**Decision:** Record the Phase 3 Academic & Teaching vertical slice as implemented for local evidence while keeping M3 **open** until API role/negative tests, role-name alignment, configurable workload policy, timetable publish/recurrence policy, teacher attendance, and frontend/E2E workflows are complete.
+
+**Scope implemented:** `employees`, `academics`, `teaching`, and `attendance` apps; academic sessions/terms, class levels/arms, subjects/offerings, class enrolments; effective-dated teacher assignments with reassignment history; draft/versioned timetable slots with teacher/class/room conflict checks; student offering-based attendance sessions/marking/corrections with privileged correction policy and application-level audit events; M3 module/verb grants seeded via `0004_seed_phase3_permissions.py`.
+
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (29 tests), and `manage.py migrate` against PostgreSQL 18. Remote CI evidence for the M3 commit is recorded in `README.md` once available.
+
+**Owner:** Product / Engineering
+**Approval:** Not an acceptance decision. Phase 3 remains in hardening; proceed to Phase 4 only after this implementation is committed with passing CI and M3 gaps remain explicitly tracked.
 
 ---
 
@@ -695,7 +706,7 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-027 | Approved for implementation as recorded (D-010 validated in Phase 1/M1; D-026 approves the RBAC baseline; D-027 accepts Phase 2/M2 and authorizes Phase 3; D-012/D-013/D-016–D-019 include interim approaches pending external inputs) |
+| D-001–D-028 | Approved/recorded for implementation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028 records M3 implemented-but-not-accepted status; provider/school-policy items remain pending) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
@@ -703,17 +714,17 @@ Changing an approved decision requires a documented change request and impact as
 | Infrastructure selection | Pending (Q-005) — targets/approach approved |
 | Architecture validation | Blueprint reviewed/documented; to be enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register (subject to ongoing governance) |
-| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3 authorized |
-| Testing | Backend/frontend validated locally and in remote CI (25 backend tests, run pending for closure commit); containerized backend runtime pending |
+| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3/M3 academic/teaching slice implemented but not accepted |
+| Testing | 29 backend tests passing locally; remote CI green for Phase 2 closure (`44775171408`), M3 remote CI evidence pending; containerized backend runtime pending |
 
 ---
 
 # 9. Phase 0 Readiness Recommendation
 
-**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; Phase 3 approved to proceed (D-027)**
+**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; Phase 3/M3 slice implemented but not accepted**
 
 The project may proceed now with:
-- Phase 3 Academic & Teaching implementation per `IMPLEMENTATION_ROADMAP.md`, using the approved RBAC baseline (D-026) and Phase 2 closure (D-027).
+- Continued Phase 3 Academic & Teaching hardening per `IMPLEMENTATION_ROADMAP.md` and D-028: API role/negative tests, role-name alignment, configurable workload policy, timetable publish/recurrence, teacher attendance, and frontend/E2E workflows.
 - Completion of remaining Phase 1 hardening (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
 - Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.
