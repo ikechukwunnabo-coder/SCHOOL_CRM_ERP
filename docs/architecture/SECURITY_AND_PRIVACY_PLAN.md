@@ -69,12 +69,12 @@
 ## 10. Secure SDLC & Verification
 - Security requirements and threat-aware reviews in design (Phase 0 onward).
 - Automated tests: authn/authz positive & negative (incl. cross-tenant/campus/IDOR), workflow/state integrity, input validation, file access controls.
-- Current local evidence: `pytest -q` -> 68 passed against PostgreSQL 18, `verify_audit_chain` valid, `npm run lint` pass, `npm test` -> 17 passed, `npm run build` pass, `npm run test:e2e` -> 2 mocked specs passed. Coverage includes teacher scope, object-level/IDOR denial, role/negative API tests, approval/publication API denials, transcript/report-card private PDF download, public verification outcomes, and audit-chain tamper detection. CI config now includes backend audit-chain verification and frontend lint/E2E, but closure code is uncommitted/unpushed, so remote CI evidence is pending with no run ID.
+- Current local evidence: `pytest -q` -> 68 passed against PostgreSQL 18, `verify_audit_chain` valid, `npm run lint` pass, `npm test` -> 17 passed, `npm run build` pass, `npm run test:e2e` -> 2 mocked specs passed. Coverage includes teacher scope, object-level/IDOR denial, role/negative API tests, approval/publication API denials, transcript/report-card private PDF download, public verification outcomes, and audit-chain tamper detection. CI config includes backend audit-chain verification and frontend lint/E2E; closure remote CI run `45218305149` passed after `a7cfb58` fixed the missing migration step that caused `45217310279` to fail.
 - Pre-production: security review, dependency scan, configuration review; periodic reassessment.
 
 ## 11. Open Items (Pending)
 - Confirm compliance/regulatory obligations applicable to the institution/jurisdiction.
 - Finalize data retention schedule and incident response contacts/runbook (with Ops plan); D-011 secure-cookie/CSRF flow is implemented.
 - Provider DPAs and data residency/processing terms (integrations/storage).
-- M3/M4 acceptance gates: formal UAT/sign-off on the locally validated security controls and Q-003 official grading-policy confirmation; remote CI evidence for the closure pending commit/push.
+- M3/M4 acceptance gates: formal UAT/sign-off on the locally validated security controls and Q-003 official grading-policy confirmation; remote CI evidence is green (`45218305149`).
 - Containerized backend/Celery runtime and Celery/Redis integration remain separate infrastructure validation items.

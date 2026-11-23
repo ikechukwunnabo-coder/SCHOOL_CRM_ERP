@@ -1,6 +1,6 @@
 # Technology Compatibility Matrix
 
-**Status:** Validated locally through the M3/M4 acceptance-gap closure (2026-11-23): PostgreSQL 18 container healthy, 68 backend tests passing, audit-chain verification valid, frontend lint/unit/build/E2E green. Historical remote CI was green through the transcript slice (`45149166162`); the closure code is uncommitted/unpushed, so remote CI evidence is pending and no closure run ID exists. D-010 confirmed for committed pins.
+**Status:** Validated locally and in remote CI through the M3/M4 acceptance-gap closure (2026-11-23): PostgreSQL 18 container healthy, 68 backend tests passing, audit-chain verification valid, frontend lint/unit/build/E2E green. Closure CI run `45218305149` passed at commit `a7cfb58`; initial run `45217310279` failed because CI skipped database migration before audit verification and was fixed. D-010 confirmed for committed pins.
 
 > Per Master Spec: verify official compatibility and security support, pin exact compatible versions, commit lockfiles. Do not blindly install unpinned latest versions.
 
@@ -31,7 +31,7 @@
 - **Migrations:** `python manage.py makemigrations --check --dry-run` reports no drift; applied migrations include M3 workload/recurrence/publish and teacher attendance, M4 report-card PDF/grading policy, alumni linkage, role normalization and audit immutability chains.
 - **Containers:** `docker compose up -d db redis` healthy (Postgres 18.7, Redis 8). Native Windows PostgreSQL on host port 5432 shadows the published port; use the compose network with `DOCKER_API_VERSION=1.44` for container-side validation.
 - **Frontend:** `npm run lint` pass; `npm test` -> **17 Vitest tests passed**; `npm run build` (`tsc -b && vite build`) pass; `npm run test:e2e` -> **2 mocked Playwright specs passed**.
-- **Remote CI:** historical runs green for scaffold (`44761962350`), Phase 2 (`44769870049`), Phase 2 closure (`44775171408`), M3 (`45130273958`, commit `d5c293a`), M4 examinations (`45135466158`, commit `3f04813`), M4 evidence (`45136374503`, commit `7913324`), and transcript (`45149166162`, commit `a603498`). CI now also runs backend audit-chain verification and frontend lint/E2E, but the closure code is not committed or pushed; there is no remote CI run ID for it and evidence is pending until commit/push.
+- **Remote CI:** historical runs green for scaffold (`44761962350`), Phase 2 (`44769870049`), Phase 2 closure (`44775171408`), M3 (`45130273958`, commit `d5c293a`), M4 examinations (`45135466158`, commit `3f04813`), M4 evidence (`45136374503`, commit `7913324`), and transcript (`45149166162`, commit `a603498`). CI now also runs backend audit-chain verification and frontend lint/E2E; closure commit `a7cfb58` passed run `45218305149` after the initial closure run `45217310279` failed because the service DB was not migrated before audit verification.
 - **Dependencies/locks:** `backend/requirements.txt` and `backend/requirements-dev.txt` pinned (pip freeze); `frontend/package-lock.json` committed. Deviation from the `uv`/`pnpm` target: neither tool is installed here, so pip freeze + npm lock are the committed locks.
 - **Not validated:** backend Docker image export hangs in Docker Desktop; Celery worker and containerized backend runtime not exercised. M3/M4 are not accepted pending UAT/sign-off and Q-003.
 
@@ -39,7 +39,7 @@
 - **Backend:** declared in `backend/pyproject.toml`; pinned snapshot committed as `backend/requirements.txt` (+ `backend/requirements-dev.txt`) from scaffold venv. Future: consider compiled/hashed locks and CI drift checks.
 - **Frontend:** `frontend/package.json` + committed `frontend/package-lock.json` (npm). CI configured for npm cache/install.
 - **Python venv:** local `school_erp_venv/` at project root; not committed.
-- **CI:** workflow (`.github/workflows/ci.yml`) installs from pinned files and runs backend lint/check/migration-check/tests plus audit-chain verification, and frontend lint/unit tests/build/E2E. Local closure evidence is green; a successful remote run is still pending commit/push.
+- **CI:** workflow (`.github/workflows/ci.yml`) installs from pinned files and runs backend lint/check/migration-check/migrate/tests plus audit-chain verification, and frontend lint/unit tests/build/E2E. Local and remote closure evidence are green (`45218305149`).
 
 ## 4. Compatibility Verification Checklist (D-010)
 - [x] Generate backend dependency pin snapshot and frontend lockfile for scaffold
@@ -47,7 +47,7 @@
 - [x] Run frontend typecheck/build locally and in CI on Node 22
 - [x] Run M3/M4 closure backend checks locally: 68 tests, audit-chain verification valid
 - [x] Run M3/M4 closure frontend checks locally: lint, 17 Vitest tests, build, 2 mocked Playwright specs
-- [ ] Obtain remote CI evidence for the closure (not committed/pushed; no run ID)
+- [x] Obtain remote CI evidence for the closure (`45218305149` at `a7cfb58`; initial `45217310279` failure fixed in `a7cfb58`)
 - [x] Confirm Django 5.2 LTS / Python 3.14 / psycopg 3 compatibility in the executed CI and local PostgreSQL 18 run
 - [ ] Confirm DRF, Celery, Redis client, auth/storage libs compatibility in an integrated Celery/Redis runtime
 - [ ] Validate `docker compose` backend/celery services and containerized workflows (db/redis and frontend image validated)
@@ -64,4 +64,4 @@
 - Lockfile tooling deviates from the approved `uv`/`pnpm` strategy (pip freeze and npm lock committed instead).
 - Provider SDKs (payments/SMS/email/storage) may introduce additional constraints when integrated.
 
-**Decision status:** D-010 **Validated for committed pins** (historical Phase 2/M3/M4/transcript CI green, PostgreSQL 18 runtime validated; M3/M4 closure locally validated with 68 backend tests, audit-chain verification, 17 Vitest tests and 2 mocked Playwright specs). Open follow-ups: remote CI evidence for the uncommitted closure, containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling. M3/M4 remain not accepted pending UAT/sign-off and Q-003.
+**Decision status:** D-010 **Validated for committed pins** (historical Phase 2/M3/M4/transcript CI green, PostgreSQL 18 runtime validated; M3/M4 closure validated with 68 backend tests, audit-chain verification, 17 Vitest tests, 2 mocked Playwright specs, and remote CI run `45218305149`). Open follow-ups: containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling. M3/M4 remain not accepted pending UAT/sign-off and Q-003.

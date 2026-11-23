@@ -1,6 +1,6 @@
 # Test Strategy
 
-**Status:** Living strategy. Testing is mandatory; the M3/M4 closure has local evidence of 68 backend tests, 17 Vitest tests, and 2 mocked Playwright specs. M3/M4 remain not accepted pending formal UAT/sign-off and Q-003; remote CI evidence for the uncommitted closure is pending.
+**Status:** Living strategy. Testing is mandatory; the M3/M4 closure has local and remote CI evidence of 68 backend tests, 17 Vitest tests, and 2 mocked Playwright specs (`45218305149`). M3/M4 remain not accepted pending formal UAT/sign-off and Q-003.
 
 ## 1. Objectives & Quality Gates
 - Verify correctness of business rules, workflows, calculations, and data integrity.
@@ -17,7 +17,7 @@
 - **Permission & scope tests:** role/scope matrix enforcement, object-level/IDOR cases, cross-institution and cross-campus denial, unauthenticated access.
 - **Data integrity tests:** DB constraints (unique FKs/checks), transactional atomicity, concurrency-sensitive operations (e.g. stock issuance, payment posting).
 - **Integration tests:** module interactions (admissions→student→enrolment, academics→teaching→attendance, teaching→results→report/transcript, PO→GRN→stock/asset, payment verify→receipt/balance).
-- **Current backend evidence (M3/M4 closure):** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` -> **68 passed** against PostgreSQL 18; `python manage.py verify_audit_chain` -> valid. Coverage includes object-level scoped querysets, canonical-role and negative API tests, cross-scope/IDOR denial, configurable workload policy, timetable recurrence/publish, teacher attendance, audit-chain immutability/hash verification, PDF report cards with private storage/hash/snapshot/download, effective-dated grading policy, and graduation→alumni linkage. Historical slices were 29 M3 tests, 5 M4 examinations tests and 5 transcript tests with earlier green CI runs; the closure code is not committed or pushed, so no remote CI run ID exists for this evidence.
+- **Current backend evidence (M3/M4 closure):** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` -> **68 passed** against PostgreSQL 18; `python manage.py verify_audit_chain` -> valid. Coverage includes object-level scoped querysets, canonical-role and negative API tests, cross-scope/IDOR denial, configurable workload policy, timetable recurrence/publish, teacher attendance, audit-chain immutability/hash verification, PDF report cards with private storage/hash/snapshot/download, effective-dated grading policy, and graduation→alumni linkage. Historical slices were 29 M3 tests, 5 M4 examinations tests and 5 transcript tests with earlier green CI runs; closure remote CI passed at `a7cfb58` (`45218305149`) after fixing the initial missing-migration failure in run `45217310279`.
 
 ### 2.2 Frontend (Vitest/React Testing Library as chosen)
 - Component/unit tests for critical UI logic and rendering states.
@@ -59,7 +59,7 @@ Additional E2E as implemented: ID card generate/verify/revoke, inventory receive
 
 ## 4. CI/CD Integration
 - On PR/commit: lint/format, type checks (backend/frontend), unit/integration tests, build verification.
-- E2E: CI now runs frontend lint and Playwright E2E in addition to backend checks, including `verify_audit_chain`; local closure evidence is green, but the code is not committed or pushed and there is no remote CI run ID yet.
+- E2E: CI runs frontend lint and Playwright E2E in addition to backend checks, including `verify_audit_chain`; closure remote CI run `45218305149` passed.
 - Fail pipeline on test failures, critical lint/type errors, or coverage drop below agreed threshold for critical modules (once established).
 - Publish test reports and artifacts (e.g. coverage, Playwright traces/screenshots on failure).
 

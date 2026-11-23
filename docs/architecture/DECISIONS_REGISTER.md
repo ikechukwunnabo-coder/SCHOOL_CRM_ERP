@@ -36,7 +36,7 @@ The following decisions establish the initial project direction and are approved
 
 **Decision:** Python 3.14.x is the approved provisional backend runtime target.
 
-**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; historical verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`, `45130273958`, `45135466158`, `45149166162`; PostgreSQL 18 runtime and 39 backend tests through the transcript slice). The M3/M4 closure has local evidence only (68 backend tests, 17 Vitest tests, 2 mocked Playwright specs); remote CI evidence is pending commit/push and no closure run ID exists. Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
+**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; historical verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`, `45130273958`, `45135466158`, `45149166162`; PostgreSQL 18 runtime and 39 backend tests through the transcript slice). The M3/M4 closure has local evidence (68 backend tests, 17 Vitest tests, 2 mocked Playwright specs) and remote CI evidence: closure commit `d59f744` failed run `45217310279` because the service DB was not migrated before audit verification; CI fix `a7cfb58` added migration and rerun `45218305149` passed. Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
 
 ### 2.1 Backend technology baseline
 
@@ -589,7 +589,7 @@ No shared production administrator account should be used.
 
 **Scope implemented:** `employees`, `academics`, `teaching`, and `attendance` apps; academic sessions/terms, class levels/arms, subjects/offerings, class enrolments; effective-dated teacher assignments with reassignment history; draft/versioned timetable slots with recurrence and draft/approve/publish/revise workflow plus teacher/class/room conflict checks; institution-scoped configurable workload policy; teacher attendance; student offering-based attendance sessions/marking/corrections with privileged correction policy and application-level audit events; object-level queryset scoping; canonical RBAC role names with backward-compatible aliases; role/negative and cross-scope/IDOR API tests; M3 module/verb grants seeded via `0004_seed_phase3_permissions.py`.
 
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and audit-chain verification pass against PostgreSQL 18. Historical M3 commit `d5c293a` passed remote CI run `45130273958` with 29 tests; the closure code is not yet committed or pushed, so no remote CI run ID exists for the current state.
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and audit-chain verification pass against PostgreSQL 18. Historical M3 commit `d5c293a` passed remote CI run `45130273958` with 29 tests; closure CI passed at `a7cfb58` (`45218305149`) after initial run `45217310279` failed due to a missing CI migration.
 
 **Owner:** Product / Engineering
 **Approval:** Not an acceptance decision. M3 technical hardening is closed locally; formal UAT/sign-off and Q-003 remain required before acceptance.
@@ -600,7 +600,7 @@ No shared production administrator account should be used.
 
 **Scope implemented:** `examinations` app; assessment schemes/components; effective-dated grading scales and configurable effective-dated `GradingPolicy` (placeholder/default values until Q-003 is resolved); offering-scoped teacher result entry with weighted scoring; submit/return/approve/publish workflow with self-approval denial; correction records with prior-value preservation and re-approval; published-only report-card snapshots; PDF report cards with private storage/hash/snapshot and authenticated download; DB-level immutable/tamper-evident audit chain with hash verification; institution/campus-scoped and object-level querysets; role/negative and cross-scope/IDOR API tests; module/verb grants seeded via `0005_seed_phase4_permissions.py`.
 
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and `verify_audit_chain` pass against PostgreSQL 18. Historical M4 commit `3f04813` passed remote CI run `45135466158` with 34 tests; the closure code is not yet committed or pushed, so no remote CI run ID exists for the current state.
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and `verify_audit_chain` pass against PostgreSQL 18. Historical M4 commit `3f04813` passed remote CI run `45135466158` with 34 tests; closure CI passed at `a7cfb58` (`45218305149`) after initial run `45217310279` failed due to a missing CI migration.
 
 **Owner:** Product / Engineering
 **Approval:** Not an acceptance decision. M4 technical hardening is closed locally; official grading policy confirmation (Q-003) and formal UAT/sign-off remain required before transcript/report-card acceptance and go-live.
@@ -611,7 +611,7 @@ No shared production administrator account should be used.
 
 **Scope implemented:** `transcripts` app; transcript request/review/approve/generate/issue/correct/revoke workflow; published-only result snapshots that preserve historical grading-scale content; completeness detection for missing/unpublished sessions and graduation records; private PDF generation with QR verification path; hash-only verification tokens with minimal public verification responses; version supersession that invalidates prior tokens while preserving prior PDFs/snapshots; institution/campus-scoped APIs; graduation→alumni linkage via `apps.alumni`; M3/M4 frontend pages with 17 Vitest tests and 2 mocked Playwright specs; module/verb grants seeded via `0006_seed_phase4_transcript_permissions.py` and `0008_seed_alumni_permissions.py`; application-level audit events; service/API role/negative and cross-scope/IDOR tests.
 
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), `npm run lint`, `npm test` (17 passed), `npm run build`, and `npm run test:e2e` (2 passed) all pass. Historical transcript commit `a603498` passed remote CI run `45149166162` with 39 tests; the closure code is not yet committed or pushed, so no remote CI run ID exists for the current state.
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), `npm run lint`, `npm test` (17 passed), `npm run build`, and `npm run test:e2e` (2 passed) all pass. Historical transcript commit `a603498` passed remote CI run `45149166162` with 39 tests; closure CI passed at `a7cfb58` (`45218305149`) after initial run `45217310279` failed due to a missing CI migration.
 
 **Owner:** Product / Engineering
 **Approval:** Not an acceptance decision. The transcript slice and closure work are validated locally; M4 remains not accepted pending Q-003 and formal UAT/sign-off.
@@ -632,7 +632,7 @@ No shared production administrator account should be used.
 
 **Local evidence:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` -> 68 passed against PostgreSQL 18; `python manage.py verify_audit_chain` -> valid; `npm run lint` pass; `npm test` -> 17 passed; `npm run build` pass; `npm run test:e2e` -> 2 passed. CI configuration now includes backend audit-chain verification and frontend lint/E2E.
 
-**Remote CI:** No remote CI run ID exists for this closure because the new code is not committed or pushed. Remote CI evidence is pending until commit/push. Containerized backend/Celery runtime and Celery/Redis integration remain separate outstanding infrastructure validation items.
+**Remote CI:** Closure run `45217310279` failed because CI did not migrate the service database before audit verification; `a7cfb58` added the migrate step and rerun `45218305149` passed. Containerized backend/Celery runtime and Celery/Redis integration remain separate outstanding infrastructure validation items.
 
 **Owner:** Product / Engineering / School Management
 **Approval:** Not an acceptance decision. Formal UAT/sign-off and Q-003 remain required; no production acceptance is implied.
@@ -758,7 +758,7 @@ Changing an approved decision requires a documented change request and impact as
 | Architecture validation | Blueprint reviewed/documented; enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register for baselines; M3/M4 UAT/sign-off not yet recorded |
 | Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003 |
-| Testing | Closure local evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass. Historical CI was green through transcript slice (`45149166162`); remote CI evidence for the uncommitted closure is pending, with no run ID; containerized backend runtime pending |
+| Testing | Closure evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass. Historical CI was green through transcript slice (`45149166162`); closure CI passed at `a7cfb58` (`45218305149`) after initial `45217310279` missing-migration failure was fixed; containerized backend runtime pending |
 
 ---
 
@@ -767,9 +767,9 @@ Changing an approved decision requires a documented change request and impact as
 **Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003**
 
 The project may proceed now with:
-- Formal M3/M4 UAT and owner sign-off using the locally validated closure evidence recorded in D-031; do not record acceptance before sign-off.
+- Formal M3/M4 UAT and owner sign-off using the validated closure evidence recorded in D-031; do not record acceptance before sign-off.
 - Resolution of Q-003 official grading/CA/promotion policy and replacement of placeholder/default `GradingPolicy` values before results/transcript acceptance and go-live.
-- Commit/push of the closure code to obtain the pending remote CI run for backend audit-chain verification and frontend lint/E2E; no remote CI ID exists yet.
+- Closure code is committed and remotely CI-green (`a7cfb58`, run `45218305149`); keep CI green on subsequent changes.
 - Completion of remaining infrastructure validation (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
 - Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.

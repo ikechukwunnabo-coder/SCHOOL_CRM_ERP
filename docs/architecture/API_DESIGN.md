@@ -1,6 +1,6 @@
 # API Design
 
-**Status:** Living API design. M1–M4 endpoints, including M3/M4 hardening endpoints, are implemented locally; historical CI was green through the transcript slice (`45149166162`). The closure code is not committed or pushed, so remote CI evidence for it is pending and no run ID exists. Remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are not accepted pending UAT/sign-off and Q-003.
+**Status:** Living API design. M1–M4 endpoints, including M3/M4 hardening endpoints, are implemented and remote-CI green (`45218305149`, commit `a7cfb58`); historical CI was green through the transcript slice (`45149166162`). The initial closure run (`45217310279`, commit `d59f744`) failed because CI skipped database migration before audit verification; fixed by `a7cfb58`. Remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are not accepted pending UAT/sign-off and Q-003.
 **Style:** RESTful JSON APIs (Django REST Framework), versioned, with generated schema at `/api/schema/` and Swagger UI at `/api/docs/`.
 
 ## 1. Conventions
@@ -71,7 +71,7 @@
 | Transcripts | `/api/v1/transcripts/requests/`, `/api/v1/transcripts/`, `/api/v1/transcripts/requests/{id}/review|approve|reject|generate/`, `/api/v1/transcripts/{id}/issue|correct|revoke|download|verifications/`, `POST /api/v1/transcripts/verify/` | request/issue/correct/revoke workflow; private PDF; public token verification with minimal response |
 | Alumni | `/api/v1/alumni/records/` | read-only graduation-linked alumni records |
 
-M3/M4 querysets are institution/campus scoped with object-level enforcement; role/negative and cross-scope/IDOR API tests cover the implemented grants. Frontend M3/M4 pages, 17 Vitest tests, and 2 mocked Playwright specs are implemented locally; remote CI evidence is pending commit/push. M3/M4 remain not accepted pending UAT/sign-off and Q-003.
+M3/M4 querysets are institution/campus scoped with object-level enforcement; role/negative and cross-scope/IDOR API tests cover the implemented grants. Frontend M3/M4 pages, 17 Vitest tests, and 2 mocked Playwright specs are implemented and green in remote CI run `45218305149`. M3/M4 remain not accepted pending UAT/sign-off and Q-003.
 
 ## 7. File Uploads & Downloads
 - Multipart uploads with validation (type/size/MIME/extension, safe names); malware-scan hook where available.
