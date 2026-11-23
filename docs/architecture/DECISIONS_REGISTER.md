@@ -36,7 +36,7 @@ The following decisions establish the initial project direction and are approved
 
 **Decision:** Python 3.14.x is the approved provisional backend runtime target.
 
-**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`, `45130273958`, `45135466158`; PostgreSQL 18 runtime, 39 backend tests locally through transcript slice, CI green through M4 examinations)
+**Approval:** Approved. Exact patch versions are committed in `backend/requirements.txt`/`backend/requirements-dev.txt` and `frontend/package-lock.json`; verification evidence is recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` (CI runs `44761962350`, `44769870049`, `44775171408`, `45130273958`, `45135466158`, `45149166162`; PostgreSQL 18 runtime, 39 backend tests locally and in CI through transcript slice)
 . Deviation: pip freeze/npm lock used instead of `uv.lock`/`pnpm-lock.yaml` because those tools are unavailable; follow-up tracked in the compatibility matrix.
 
 ### 2.1 Backend technology baseline
@@ -612,7 +612,7 @@ No shared production administrator account should be used.
 
 **Scope implemented:** `transcripts` app; transcript request/review/approve/generate/issue/correct/revoke workflow; published-only result snapshots that preserve historical grading-scale content; completeness detection for missing/unpublished sessions and graduation records; private PDF generation with QR verification path; hash-only verification tokens with minimal public verification responses; version supersession that invalidates prior tokens while preserving prior PDFs/snapshots; institution/campus-scoped APIs; module/verb grants seeded via `0006_seed_phase4_transcript_permissions.py`; application-level audit events; service/API role/negative tests.
 
-**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (39 tests) against PostgreSQL 18. Transcript code is not yet committed or CI-verified.
+**Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (39 tests) against PostgreSQL 18. Transcript code commit `a603498` passed remote CI run `45149166162` (frontend build/tests and backend lint/checks/migration consistency/tests green).
 
 **Owner:** Product / Engineering
 **Approval:** Not an acceptance decision. The transcript slice is validated locally; M4 remains open, and official grading policy confirmation (Q-003) is still required before transcript/report-card UAT.
@@ -738,7 +738,7 @@ Changing an approved decision requires a documented change request and impact as
 | Architecture validation | Blueprint reviewed/documented; to be enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register (subject to ongoing governance) |
 | Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; Phase 3/M3 academic/teaching slice implemented but not accepted; Phase 4/M4 examinations and transcript backend slices implemented but not accepted |
-| Testing | 39 backend tests passing locally (29 at M3, 5 M4 examinations, 5 transcript); M4 examinations CI green (`45135466158`); transcript slice pending commit/CI; M3 CI green (`45130273958`); Phase 2 closure CI green (`44775171408`); containerized backend runtime pending |
+| Testing | 39 backend tests passing locally and in CI (29 at M3, 5 M4 examinations, 5 transcript); transcript CI green (`45149166162`, commit `a603498`); M4 examinations CI green (`45135466158`); M3 CI green (`45130273958`); Phase 2 closure CI green (`44775171408`); containerized backend runtime pending |
 
 ---
 

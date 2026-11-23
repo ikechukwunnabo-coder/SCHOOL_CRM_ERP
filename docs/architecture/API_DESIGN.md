@@ -1,6 +1,6 @@
 # API Design
 
-**Status:** Living API design. M1–M3 endpoints and the M4 examinations/transcript backend endpoints are implemented; transcript endpoints are locally validated and pending CI evidence. Remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are implemented but not accepted.
+**Status:** Living API design. M1–M3 endpoints and the M4 examinations/transcript backend endpoints are implemented and CI-verified (`45149166162` for transcript endpoints). Remaining Phase 4+ groups stay illustrative until coded. M3 and M4 are implemented but not accepted.
 **Style:** RESTful JSON APIs (Django REST Framework), versioned, with generated schema at `/api/schema/` and Swagger UI at `/api/docs/`.
 
 ## 1. Conventions

@@ -101,6 +101,6 @@ Per `IMPLEMENTATION_ROADMAP.md`: **Phase 0 (done: documented)** → Phase 1 Foun
 - **Documented:** Phase 0 deliverables (13) and readiness report drafted in `docs/architecture/`, with current status notes added as implementation progressed.
 - **Approved:** Baseline decisions D-001–D-021 documented; D-010 validated; D-026 RBAC baseline approved; D-027 Phase 2/M2 closed; D-028/D-029/D-030 record M3/M4 backend slices as implemented but not accepted.
 - **Implemented:** M1 foundation, M2 student/admissions vertical slice, M3 academic/teaching/attendance slice, and M4 examinations/results/report-card/transcript backend slices. M3/M4 remain open for hardening and missing workflows.
-- **Tested:** 39 backend tests pass locally against PostgreSQL 18 (34 through M4 examinations, plus 5 transcript tests); M4 remote CI green (`45135466158`) and M3 remote CI green (`45130273958`). Transcript CI evidence is pending. Frontend build green; E2E and production runtime validation remain open.
+- **Tested:** 39 backend tests pass locally and in CI against PostgreSQL 18 (34 through M4 examinations, plus 5 transcript tests); transcript CI green (`45149166162`), M4 remote CI green (`45135466158`), and M3 remote CI green (`45130273958`). Frontend build green; E2E and production runtime validation remain open.
 
 *Next action:* complete M3/M4 hardening and remaining Phase 4 workflows, then obtain approval at the appropriate milestone gates; keep unresolved provider, school-policy, and infra decisions tracked in `DECISIONS_REGISTER.md`.

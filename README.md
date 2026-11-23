@@ -37,7 +37,7 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 - Backend: `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**39 tests**: M1–M3 coverage plus examinations scoring, workflow, self-approval denial, teacher scope, corrections, report-card snapshots, transcript PDF/version/verification workflows, and API role/negative tests). Validated against PostgreSQL 18.
 - Frontend: `npm run build` pass (`tsc -b && vite build`); `frontend/package-lock.json` committed.
 - Backend dependencies pinned via `backend/requirements.txt` and `backend/requirements-dev.txt` (pip freeze snapshot).
-- Remote CI green through M4 evidence commit `7913324` (runs `44769870049` for Phase 2, `44775171408` for Phase 2 closure, `45130273958` for M3, `45135466158` for M4 code `3f04813`, and `45136374503` for M4 evidence). The transcript slice is locally validated and pending commit/CI evidence.
+- Remote CI green through transcript code commit `a603498` (runs `44769870049` for Phase 2, `44775171408` for Phase 2 closure, `45130273958` for M3, `45135466158` for M4 code `3f04813`, `45136374503` for M4 evidence, and `45149166162` for transcript code). M3/M4 remain not accepted.
 - M4 includes API role/negative tests for result approval/publication and transcript request/issue/download/verification; frontend/E2E workflows, PDF report cards, and graduation→alumni linkage remain outstanding.
 - **Not yet validated here:** containerized backend/Celery runtime (Docker Desktop stalls at image export) and Celery/Redis task integration.
 

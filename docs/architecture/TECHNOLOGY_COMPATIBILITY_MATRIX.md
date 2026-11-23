@@ -1,6 +1,6 @@
 # Technology Compatibility Matrix
 
-**Status:** Validated through the M4 transcript backend slice locally (2026-11-23): PostgreSQL 18 container healthy, 39 backend tests passing locally; committed pins green in remote CI through M4 examinations (`45135466158`), with transcript CI evidence pending. Frontend build green. D-010 confirmed for committed pins.
+**Status:** Validated through the M4 transcript backend slice (2026-11-23): PostgreSQL 18 container healthy, 39 backend tests passing locally and in remote CI (`45149166162`); frontend build green. D-010 confirmed for committed pins.
 
 > Per Master Spec: verify official compatibility and security support, pin exact compatible versions, commit lockfiles. Do not blindly install unpinned latest versions.
 
@@ -27,10 +27,10 @@
 
 ## 2. Validation Evidence (2026-11-20)
 - **Backend on PostgreSQL 18:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**39 passed**: 29 at M3 covering health, auth/audit, RBAC/per-verb grants, institution/campus scoping, admissions, duplicate identity, guardians, lifecycle, private documents, imports, academic structure, teacher allocations, timetable conflicts, attendance scope/corrections; 5 M4 examinations covering assessment configuration, weighted scoring/grading, result workflow, correction history, report-card snapshots, and approval/publication role checks; 5 transcript covering PDF/QR generation, completeness blocking, issuance/download permissions, public verification, correction versioning, and revocation).
-- **Migrations:** `python manage.py migrate` applied M1/M2/M3/M4 migrations successfully; `makemigrations --check --dry-run` reports no drift.
+- **Migrations:** `python manage.py migrate` applied M1/M2/M3/M4 migrations successfully, including `app_permissions.0006_seed_phase4_transcript_permissions` and `app_transcripts.0001_initial`; `makemigrations --check --dry-run` reports no drift.
 - **Containers:** `docker compose up -d db redis` healthy (Postgres 18.7, Redis 8). Native Windows PostgreSQL on host port 5432 shadows the published port; use the compose network with `DOCKER_API_VERSION=1.44` for container-side validation.
 - **Frontend:** `npm run build` (`tsc -b && vite build`) pass locally and in remote CI on Node 22.
-- **Remote CI:** green for scaffold (`44761962350`), Phase 2 (`44769870049`), Phase 2 closure (`44775171408`), M3 (`45130273958`, commit `d5c293a`), and M4 examinations (`45135466158`, commit `3f04813`) against pinned `backend/requirements.txt` and `frontend/package-lock.json`; transcript slice pending commit/CI evidence. Node 20 action deprecation warnings are non-blocking.
+- **Remote CI:** green for scaffold (`44761962350`), Phase 2 (`44769870049`), Phase 2 closure (`44775171408`), M3 (`45130273958`, commit `d5c293a`), M4 examinations (`45135466158`, commit `3f04813`), M4 evidence (`45136374503`, commit `7913324`), and transcript (`45149166162`, commit `a603498`) against pinned `backend/requirements.txt` and `frontend/package-lock.json`. Node 20 action deprecation warnings are non-blocking.
 - **Dependencies/locks:** `backend/requirements.txt` and `backend/requirements-dev.txt` pinned (pip freeze); `frontend/package-lock.json` committed. Deviation from the `uv`/`pnpm` target: neither tool is installed here, so pip freeze + npm lock are the committed locks.
 - **Not validated:** backend Docker image export hangs in Docker Desktop; Celery worker and containerized backend runtime not exercised.
 
@@ -50,7 +50,7 @@
 - [x] Achieve green CI runs on pinned artifacts (`44761962350`, `44769870049`, `44775171408`)
 - [x] Achieve green CI run for the M3 commit after push (`45130273958`)
 - [x] Achieve green CI run for the M4 examinations commit after push (`45135466158`)
-- [ ] Achieve green CI run for the transcript commit after push
+- [x] Achieve green CI run for the transcript commit after push (`45149166162`)
 - [ ] Review security support/EOL dates and harden pins as needed
 - [ ] Replace pip freeze/npm locks with `uv.lock`/`pnpm-lock.yaml` when those tools are available (D-010 deviation)
 
@@ -60,4 +60,4 @@
 - Lockfile tooling deviates from the approved `uv`/`pnpm` strategy (pip freeze and npm lock committed instead).
 - Provider SDKs (payments/SMS/email/storage) may introduce additional constraints when integrated.
 
-**Decision status:** D-010 **Validated for committed pins** (Phase 2/closure/M3/M4 examinations CI green, PostgreSQL 18 runtime validated, 39 backend tests locally through transcript slice). Open follow-ups: transcript CI evidence, containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling.
+**Decision status:** D-010 **Validated for committed pins** (Phase 2/closure/M3/M4/transcript CI green, PostgreSQL 18 runtime validated, 39 backend tests locally and in CI through transcript slice). Open follow-ups: containerized backend/celery runtime, Celery/Redis integration, EOL review, and `uv`/`pnpm` lock tooling.
