@@ -6,7 +6,7 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 **Phase 0 docs:** `docs/architecture/` (decisions, architecture, ERD, RBAC, workflows, API, plans)  
 **Decisions register:** `docs/architecture/DECISIONS_REGISTER.md` (Approved; M1–M4 accepted, latest acceptance recorded in D-032; local runtime validation recorded in D-033)
 
-> Status: **M3/M4 accepted; formal UAT/sign-off recorded by owner instruction and Q-003 official policy confirmation accepted (D-032).** Documented/approved baselines exist; no feature is considered implemented or tested unless evidenced. Remaining open items are production infrastructure/orchestration, provider, production-control and Phase 5+ scope.
+> Status: **M3/M4 accepted (D-032); local runtime validation recorded (D-033); Phase 5 finance foundation slice implemented locally (D-034, not M5 acceptance).** Remaining open items include production infrastructure/orchestration, provider go-live/integrations, finance portals/webhooks/reconciliation/GL controls, and other Phase 5+ scope.
 
 ## Stack (provisional baseline, D-010 — validate in scaffold/CI)
 - **Backend:** Python 3.14.x, Django 5.2 LTS, Django REST Framework, PostgreSQL 18, Redis 8, Celery, Gunicorn
@@ -14,7 +14,7 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 - **Infra:** Docker / Docker Compose, env-based config
 
 ## Repository layout
-- `backend/` — Django + DRF application (`config/`, `apps/core|institutions|accounts|permissions|audit|guardians|admissions|students|imports|employees|academics|teaching|attendance|examinations|transcripts|alumni`)
+- `backend/` — Django + DRF application (`config/`, `apps/core|institutions|accounts|permissions|audit|guardians|admissions|students|imports|employees|academics|teaching|attendance|examinations|transcripts|alumni|finance`)
 - `frontend/` — React + TypeScript (Vite) auth/dashboard shell
 - `infrastructure/` — deployment/infra assets
 - `docs/architecture/` — living architecture/status docs updated through M4
@@ -34,7 +34,7 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 4. Frontend: `cd frontend; npm install; npm run dev` (default Vite dev server).
 
 ## Local validation (current evidence)
-- Backend: `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**70 tests** against PostgreSQL 18), including object-level scoped querysets, canonical-role and negative API tests, cross-scope/IDOR denial, audit-chain tamper detection, report-card PDF/hash/snapshot/download, effective-dated grading policy, timetable recurrence/publish, teacher attendance, and graduation→alumni linkage.
+- Backend: `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` pass (**74 tests** against PostgreSQL 18), including prior M3/M4 coverage plus finance invoice/payment/allocation/idempotency, adjustment approval/apply controls, and finance cross-institution IDOR denial.
 - Audit integrity: `python manage.py verify_audit_chain` -> `Audit chain valid for global (0 entries)`.
 - Frontend: `npm run lint`, `npm test` (**17 Vitest tests**), `npm run build` (`tsc -b && vite build`), and `npm run test:e2e` (**2 mocked Playwright specs**) all pass.
 - Backend dependencies pinned via `backend/requirements.txt` and `backend/requirements-dev.txt` (pip freeze snapshot); `frontend/package-lock.json` committed.
@@ -49,10 +49,11 @@ Integrated School CRM & ERP platform (modular monolith) for Nursery, Primary and
 - **Implemented (Phase 3 M3, including closure):** sessions/terms, class levels/arms, subjects/offerings, class enrolments, employee records, effective-dated teacher assignments with reassignment history, institution-scoped configurable workload policy, timetable recurrence and draft/approve/publish/revise workflow with conflict checks (teacher/class/room), teacher attendance, and student offering-based attendance sessions/marking/corrections. Object-level queryset scoping and role/negative plus cross-scope/IDOR API tests cover the M3 grants.
 - **Implemented (Phase 4 M4, including closure):** configurable assessment schemes/components, effective-dated grading scales and effective-dated `GradingPolicy` (configurable effective-dated policies accepted as institutional baseline under Q-003/D-032), offering-scoped result entry with weighted scoring, submit/return/approve/publish workflow, self-approval denial, correction history with re-approval, published-only report-card snapshots, PDF report cards with private storage/hash/snapshot and authenticated download, module/verb grants, and audited transitions; transcript request/review/approve/generate/issue/correct/revoke workflow with immutable published-result snapshots, private PDF storage, QR/hash-only public verification, and version supersession; graduation→alumni linkage via `apps.alumni`. Canonical RBAC role names are used with backward-compatible aliases.
 - **Implemented locally (integrity):** DB-level immutable/tamper-evident audit chain with sequenced SHA-256 hashes, update/delete-preventing PostgreSQL triggers, and `verify_audit_chain` verification command.
+- **Implemented locally (Phase 5 finance foundation, D-034):** `apps.finance` with fee categories/schedules, invoices/lines, payments/allocations, receipts, and controlled adjustments (request/approve/apply); scoped finance APIs, idempotent payment recording, module RBAC grants, and audit events. Not M5 acceptance; provider webhooks/reconciliation, portals, notifications, dashboards, and GL integration remain open.
 - **Implemented locally (frontend):** M3/M4 pages with Vitest unit tests and mocked Playwright E2E specs.
 - **Validated locally (runtime, D-033):** containerized backend/Celery runtime and Celery/Redis integration are no longer open blockers — direct and Compose backend image builds, healthy Compose services, health endpoint with DB/cache ok, `verify_runtime`, real `core.ping` worker execution, and persisted Celery beat schedule. Local validation only; not a production-readiness claim.
 - **Accepted:** M3/M4 formal UAT and owner sign-off recorded by owner instruction; Q-003 official grading/CA/promotion/workload/report-card policy confirmation accepted at the governance level; existing configurable effective-dated policies are the accepted institutional baseline (D-032).
-- **Still open:** production orchestration/hardening (including prefork tuning and monitoring), provider go-live selections, and Phase 5+ domain modules.
+- **Still open:** production orchestration/hardening (including prefork tuning and monitoring), provider go-live/integrations (Q-001/Q-002), finance portals/webhooks/reconciliation/GL controls, and remaining Phase 5+ domain modules.
 
 ## Governance
 Per `MASTER_CRM_ERP_SCHOOL_PROMPT.md` and `DECISIONS_REGISTER.md`: no hardcoded institution rules, backend-authoritative RBAC, audited sensitive actions, preserve historical/official records. A documented decision is not an implemented/tested system.

@@ -5,9 +5,12 @@ from django.db import transaction
 from .models import IdentifierSequence
 
 DEFAULT_PATTERNS = {
-    "application_number": "APP-{year}-{seq:06d}",
-    "admission_number": "ADM-{year}-{seq:06d}",
-    "transcript_reference": "TR-{institution_code}-{year}-{seq:06d}",
+    "application_number": "APP-{YYYY}-{seq:06d}",
+    "admission_number": "ADM-{YYYY}-{seq:06d}",
+    "employee_number": "EMP-{YYYY}-{seq:05d}",
+    "invoice_number": "INV-{YYYY}-{seq:06d}",
+    "receipt_number": "RCT-{YYYY}-{seq:06d}",
+    "transcript_reference": "TR-{institution_code}-{YYYY}-{seq:06d}",
 }
 
 
@@ -44,6 +47,7 @@ def generate_identifier(
         return pattern.format(
             institution_code=institution.code,
             year=year,
+            YYYY=year,
             scope=scope,
             seq=value,
         )

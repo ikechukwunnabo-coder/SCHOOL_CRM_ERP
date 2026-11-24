@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-**Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; M3/M4 accepted with formal UAT/sign-off recorded and Q-003 confirmed per D-032). Sequenced by dependencies and Master Spec Phases 0–7.
+**Status:** Living roadmap (Phase 0 documented; M1 accepted; M2 accepted/closed D-027; M3/M4 accepted D-032; runtime validated D-033; Phase 5 finance foundation slice recorded locally D-034, not M5 acceptance). Sequenced by dependencies and Master Spec Phases 0–7.
 **Last updated:** 2026-11-24
 
 ## 1. Guiding Approach
@@ -45,6 +45,7 @@
 - **Scope:** fee categories/schedules, invoices, payments (server-verified, idempotent), receipts/balances, refunds/reversals/adjustments, parent portal, teacher portal, notifications (in-app/email/SMS as available), basic dashboards.
 - **Milestone M5:** invoice→verified payment→receipt/balance accurate (no duplicates); parent sees only linked students/approved info; teacher sees assigned scopes; notifications logged.
 - **Dependencies:** D-012/D-013 providers or sandbox/mocks; finance domain services.
+- **Status (2026-11-24, D-034 local slice):** Finance foundation backend slice implemented locally: `apps.finance` models/services/APIs for fee categories/schedules, invoices/lines, payments/allocations, receipts, and request/approve/apply adjustments; idempotent payment recording; scoped RBAC grants; audit events. Local validation passed (74 backend tests, runtime/audit verification). **Not M5 acceptance:** provider webhooks/reconciliation, portals, notifications, dashboards, GL integration, and full M5 acceptance remain open.
 
 ### Phase 6 — Public Website & CMS (depends on M1; can parallelize partially)
 - **Scope:** public site pages, CMS admin (pages/menus/media/news/events/gallery), draft/review/publish/schedule, revisions, SEO/metadata/redirects, branding; strict public/private separation.

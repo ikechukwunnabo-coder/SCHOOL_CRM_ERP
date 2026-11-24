@@ -2,7 +2,7 @@
 ## School CRM & ERP Platform
 
 **Phase:** Living implementation governance (Phase 0 baseline through M3/M4 acceptance recorded in D-032 and local runtime validation recorded in D-033)
-**Document status:** Approved for implementation and acceptance — M1 accepted, Phase 2/M2 closed, M3/M4 accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032)
+**Document status:** Approved for implementation and acceptance — M1 accepted, Phase 2/M2 closed, M3/M4 accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); local runtime validation recorded (D-033); Phase 5 finance foundation slice recorded locally (D-034, not M5 acceptance)
 **Authoritative specification:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`  
 **Revision date:** 24 November 2026
 **Primary backend runtime:** Python 3.14.x (D-010 validated in Phase 1 scaffold/CI on 2026-11-20)  
@@ -647,6 +647,22 @@ No shared production administrator account should be used.
 
 **Approval:** Accepted. M3 and M4 are accepted; formal UAT/sign-off is complete and recorded by owner instruction; Q-003 is accepted/confirmed and the configurable effective-dated policies are the institutional baseline. This does not accept production controls, provider selections, or Phase 5+ modules; the containerized backend/Celery runtime and Celery/Redis integration were outside this acceptance and were validated locally afterwards (D-033).
 
+## D-034 — Phase 5 finance foundation slice (local, not M5 acceptance)
+
+**Decision:** Record the initial Phase 5 finance foundation backend slice as implemented and locally validated. This is not Milestone M5 acceptance and does not include portals, notifications, dashboards, payment-provider webhooks/reconciliation, or accounting/GL integration.
+
+**Scope implemented locally:**
+- New `apps.finance` domain: `FeeCategory`, `FeeSchedule`, `Invoice`, `InvoiceLine`, `Payment`, `PaymentAllocation`, `FinancialAdjustment`.
+- Service-layer workflows: create/issue invoice, record payment with idempotency key and allocations, request/approve/apply adjustment; invoice balance/status recalculation; audit events for create/issue/payment/adjustment lifecycle.
+- Scoped DRF APIs under `/api/v1/finance/` with module RBAC grants seeded by `app_permissions.0009_seed_finance_permissions`; `FinanceError` mapped to conflict responses.
+- Core identifier defaults extended for `invoice_number` and `receipt_number`; `YYYY` pattern support added while preserving existing admission/application/employee/transcript identifier patterns.
+
+**Validation:** Local direct Docker run passed: `ruff check apps config && python manage.py check && python manage.py makemigrations --check --dry-run && pytest -q && python manage.py verify_runtime && python manage.py verify_audit_chain` (**74 passed**, runtime/audit OK). Finance tests cover invoice issue/payment allocation balance updates, payment idempotency, adjustment approval-before-apply, and cross-institution IDOR denial.
+
+**Owner:** Product / Engineering / Finance
+
+**Approval:** Recorded locally on 2026-11-24 as implementation/validation evidence for a finance foundation slice only. M5 remains open until portal/provider/notification/dashboard/reconciliation/GL and acceptance criteria are completed and approved.
+
 ## D-033 — Container runtime and Celery/Redis validation
 
 **Decision:** Close the previously open containerized backend/Celery runtime and Celery/Redis integration validation gap with local validation evidence; they are no longer open blockers. Production orchestration, prefork tuning, monitoring and provider integrations remain separate production/Phase 5 concerns. This is not a production-readiness claim.
@@ -776,7 +792,7 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-033 | Approved/recorded for implementation, acceptance and validation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028–D-031 record M3/M4 implementation and closure locally; D-032 records owner-approved M3/M4 acceptance and Q-003 confirmation; D-033 records local container runtime and Celery/Redis validation; provider items remain pending) |
+| D-001–D-034 | Approved/recorded for implementation, acceptance and validation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028–D-031 record M3/M4 implementation and closure locally; D-032 records owner-approved M3/M4 acceptance and Q-003 confirmation; D-033 records local container runtime and Celery/Redis validation; D-034 records a local Phase 5 finance foundation slice, not M5 acceptance; provider items remain pending) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
@@ -784,22 +800,22 @@ Changing an approved decision requires a documented change request and impact as
 | Infrastructure selection | Pending (Q-005) — targets/approach approved |
 | Architecture validation | Blueprint reviewed/documented; enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register for baselines; M3/M4 formal UAT/sign-off recorded by owner instruction (D-032) |
-| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; M3/M4 accepted with formal UAT/sign-off and Q-003 confirmation recorded (D-032) |
-| Testing | Closure evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass; runtime validation adds 70 backend tests, `verify_runtime` pass and a real `core.ping` worker result (D-033). Historical CI was green through transcript slice (`45149166162`); closure CI passed at `a7cfb58` (`45218305149`) after initial `45217310279` missing-migration failure was fixed (historical only); docs CI `45219480024` green. The runtime/Celery validation is local only; no CI run ID is claimed for that uncommitted work |
-| Container runtime and Celery/Redis | Validated locally (D-033): direct and Compose backend image builds, healthy services, health endpoint DB/cache ok, `verify_runtime`, real `core.ping` execution, persisted beat schedule. No longer an open blocker; production orchestration/prefork tuning/monitoring remain separate |
+| Implementation | Phase 1 foundation accepted; Phase 2/M2 accepted; M3/M4 accepted with UAT/sign-off and Q-003 confirmed (D-032); Phase 5 finance foundation slice implemented/validated locally (D-034, not M5 acceptance) |
+| Testing | 74 backend tests pass locally (PostgreSQL 18) including finance slice; audit-chain and runtime verification pass (D-033/D-034, local Docker). Historical CI: closure `45218305149` at `a7cfb58` green; docs `45219480024` green. No CI run ID claimed for uncommitted D-033/D-034 work. |
+| Container runtime and Celery/Redis | Validated locally (D-033): direct/Compose builds, healthy services, health DB/cache ok, `verify_runtime`, real `core.ping`, persisted beat schedule. Production orchestration/prefork tuning/monitoring remain separate |
 
 ---
 
 # 9. Phase 0 Readiness Recommendation
 
-**Recommended status: GO — Phase 1 foundation accepted; Phase 2/M2 accepted; M3/M4 accepted with formal UAT/sign-off and Q-003 confirmation recorded (D-032)**
+**Recommended status: GO — M1/M2 accepted; M3/M4 accepted (D-032); runtime validated (D-033); Phase 5 finance foundation slice recorded locally (D-034, not M5 acceptance)**
 
 The project may proceed now with:
 - M3/M4 UAT and owner sign-off are accepted and recorded by owner instruction (D-032) using the validated closure evidence in D-031; no further M3/M4 sign-off gate remains.
 - Q-003 official grading/CA/promotion/workload/report-card policy confirmation is accepted (D-032); configurable effective-dated policies are the institutional baseline, with future changes handled by policy change control.
-- Closure code is committed and remotely CI-green (`a7cfb58`, run `45218305149`); keep CI green on subsequent changes.
-- Completion of remaining follow-ups (EOL/lockfile tooling) in parallel where non-blocking; containerized runtime and Celery/Redis integration are validated locally (D-033). Production orchestration, prefork tuning, monitoring and provider integrations remain separate production/Phase 5 concerns.
-- Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
+- Keep CI green on subsequent changes; latest committed closure CI is `45218305149` at `a7cfb58` (D-033/D-034 local work is uncommitted; no CI run claimed).
+- Complete remaining follow-ups (EOL/lockfile tooling) and production orchestration/prefork tuning/monitoring/provider integrations; local container runtime is validated (D-033).
+- Continue Phase 5: portals, provider webhooks/reconciliation, notifications, dashboards, GL controls, and M5 acceptance criteria (D-034 is foundation only).
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.
 
 Selection of payment, SMS, email or storage providers does not block provider-independent interface development, provided the integration design is documented and approved (as recorded).
