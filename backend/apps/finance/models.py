@@ -373,3 +373,42 @@ class FinancialAdjustment(TimeStampedModel):
                 name="ck_financial_adjustment_amount_positive",
             )
         ]
+
+
+class PaymentWebhookEvent(TimeStampedModel):
+    class Status(models.TextChoices):
+        RECEIVED = "received", "Received"
+        PROCESSED = "processed", "Processed"
+        IGNORED = "ignored", "Ignored"
+        FAILED = "failed", "Failed"
+
+    institution = models.ForeignKey(
+        "institutions.Institution",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="payment_webhook_events",
+    )
+    provider = models.CharField(max_length=30)
+    event_id = models.CharField(max_length=120)
+    signature_valid = models.BooleanField(default=False)
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.RECEIVED)
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="webhook_events",
+    )
+    processing_detail = models.TextField(blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["provider", "event_id"],
+                name="uq_payment_webhook_provider_event",
+            )
+        ]

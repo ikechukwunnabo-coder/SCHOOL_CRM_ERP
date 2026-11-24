@@ -14,6 +14,7 @@
 - **Data:** store provider reference, status, verified timestamp, safe response metadata; currency on transaction.
 - **Edge cases:** partials (if supported by design), reversals/refunds via authorized workflow, duplicate webhooks, out-of-order events, mismatched amounts/currency.
 - **Selection criteria (D-012):** NGN support, settlement/fees, webhook reliability, API quality, compliance, credentials availability. **Pending.**
+- **Local slice (D-034, not go-live):** mock provider adapter and signed webhook endpoint `POST /api/v1/finance/webhooks/payments/{provider}/` implemented with `X-Webhook-Signature` HMAC-SHA256 verification, idempotent `PaymentWebhookEvent` recording by provider+event_id, amount/currency mismatch rejection, and server-verified payment/invoice reconciliation. Real provider adapters, secrets management, replay tooling, and settlement reconciliation remain pending.
 
 ## 3. Email
 - **Use cases:** auth emails (password reset), notifications, receipts/statements (policy-dependent), announcements.

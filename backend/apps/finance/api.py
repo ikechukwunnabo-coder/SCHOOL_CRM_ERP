@@ -1,6 +1,7 @@
-from rest_framework import serializers, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.core.exceptions import ConflictError
@@ -20,6 +21,7 @@ from .models import (
     FinancialAdjustment,
     Invoice,
     Payment,
+    PaymentWebhookEvent,
 )
 from .services import FinanceError
 
@@ -326,3 +328,36 @@ class FinancialAdjustmentViewSet(ScopedFinanceViewSet):
         adjustment = self.get_object()
         updated = services.apply_adjustment(actor=request.user, adjustment=adjustment)
         return Response(self.get_serializer(updated).data)
+
+
+class PaymentWebhookViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    @action(detail=False, methods=["post"], url_path=r"(?P<provider>[^/.]+)")
+    def receive(self, request, provider=None):
+        signature = request.headers.get("X-Webhook-Signature", "")
+        raw_body = request.body or b""
+        payload = request.data if isinstance(request.data, dict) else {}
+        event = services.process_payment_webhook(
+            provider=provider,
+            raw_body=raw_body,
+            signature=signature,
+            payload=payload,
+        )
+        status_code = (
+            status.HTTP_200_OK
+            if event.status != PaymentWebhookEvent.Status.FAILED
+            else status.HTTP_400_BAD_REQUEST
+        )
+        return Response(
+            {
+                "id": str(event.id),
+                "provider": event.provider,
+                "event_id": event.event_id,
+                "status": event.status,
+                "processing_detail": event.processing_detail,
+                "payment_id": str(event.payment_id) if event.payment_id else None,
+            },
+            status=status_code,
+        )

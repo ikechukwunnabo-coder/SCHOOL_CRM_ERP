@@ -6,6 +6,7 @@ from .api import (
     FinancialAdjustmentViewSet,
     InvoiceViewSet,
     PaymentViewSet,
+    PaymentWebhookViewSet,
 )
 
 app_name = "finance"
@@ -16,5 +17,6 @@ router.register("fee-schedules", FeeScheduleViewSet, basename="fee-schedule")
 router.register("invoices", InvoiceViewSet, basename="invoice")
 router.register("payments", PaymentViewSet, basename="payment")
 router.register("adjustments", FinancialAdjustmentViewSet, basename="financial-adjustment")
+router.register("webhooks/payments", PaymentWebhookViewSet, basename="payment-webhook")
 
 urlpatterns = router.urls

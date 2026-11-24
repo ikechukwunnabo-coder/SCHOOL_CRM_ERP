@@ -1,11 +1,21 @@
+import hashlib
+import hmac
+import json
 from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from apps.academics.models import AcademicSession
-from apps.finance.models import FeeCategory, FinancialAdjustment, Invoice, Payment
+from apps.finance.models import (
+    FeeCategory,
+    FinancialAdjustment,
+    Invoice,
+    Payment,
+    PaymentWebhookEvent,
+)
 from apps.finance.services import create_invoice, issue_invoice, record_payment
 from apps.institutions.models import Campus, Institution
 from apps.permissions.models import Permission, Role, RolePermission, UserRole
@@ -238,3 +248,125 @@ def test_finance_cross_institution_idor_returns_404(api_client, accountant, sess
     api_client.force_authenticate(accountant)
     resp = api_client.get(f"/api/v1/finance/invoices/{other_invoice.id}/")
     assert resp.status_code == 404
+
+
+def _webhook_signature(secret: str, payload: dict) -> str:
+    body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+
+
+@override_settings(PAYMENT_WEBHOOK_SECRETS={"mock": "test-secret"})
+@pytest.mark.django_db
+def test_mock_webhook_verifies_payment_and_is_idempotent(
+    api_client, institution, campus, student, accountant, session
+):
+    invoice = create_invoice(
+        actor=accountant,
+        institution=institution,
+        campus=campus,
+        student=student,
+        session=session,
+        lines=[{"description": "Fee", "quantity": "1", "unit_amount": "1000.00"}],
+    )
+    issue_invoice(actor=accountant, invoice=invoice)
+    payment = record_payment(
+        actor=accountant,
+        institution=institution,
+        student=student,
+        campus=campus,
+        amount="1000.00",
+        provider="mock",
+        provider_ref="mock-ref-1",
+        idempotency_key="idem-webhook-1",
+        allocations=[{"invoice": invoice, "amount": "1000.00"}],
+    )
+    payment.status = Payment.Status.PENDING
+    payment.verified_at = None
+    payment.save(update_fields=["status", "verified_at", "updated_at"])
+
+    payload = {
+        "event_id": "evt-1",
+        "provider_ref": "mock-ref-1",
+        "amount": "1000.00",
+        "currency": "NGN",
+        "status": "verified",
+    }
+    signature = _webhook_signature("test-secret", payload)
+    resp1 = api_client.post(
+        "/api/v1/finance/webhooks/payments/mock/",
+        data=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+        content_type="application/json",
+        HTTP_X_WEBHOOK_SIGNATURE=signature,
+    )
+    resp2 = api_client.post(
+        "/api/v1/finance/webhooks/payments/mock/",
+        data=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+        content_type="application/json",
+        HTTP_X_WEBHOOK_SIGNATURE=signature,
+    )
+
+    assert resp1.status_code == 200
+    assert resp2.status_code == 200
+    payment.refresh_from_db()
+    invoice.refresh_from_db()
+    assert payment.status == Payment.Status.VERIFIED
+    assert invoice.status == Invoice.Status.PAID
+    assert PaymentWebhookEvent.objects.filter(provider="mock", event_id="evt-1").count() == 1
+
+
+@override_settings(PAYMENT_WEBHOOK_SECRETS={"mock": "test-secret"})
+@pytest.mark.django_db
+def test_mock_webhook_rejects_invalid_signature(api_client):
+    payload = {"event_id": "evt-bad", "provider_ref": "x", "amount": "1.00", "currency": "NGN"}
+    resp = api_client.post(
+        "/api/v1/finance/webhooks/payments/mock/",
+        data=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+        content_type="application/json",
+        HTTP_X_WEBHOOK_SIGNATURE="bad",
+    )
+    assert resp.status_code == 400
+    event = PaymentWebhookEvent.objects.get(provider="mock", event_id="evt-bad")
+    assert event.status == PaymentWebhookEvent.Status.FAILED
+    assert event.processing_detail == "invalid_signature"
+
+
+@override_settings(PAYMENT_WEBHOOK_SECRETS={"mock": "test-secret"})
+@pytest.mark.django_db
+def test_mock_webhook_amount_mismatch_is_rejected(
+    api_client, institution, campus, student, accountant, session
+):
+    invoice = create_invoice(
+        actor=accountant,
+        institution=institution,
+        campus=campus,
+        student=student,
+        session=session,
+        lines=[{"description": "Fee", "quantity": "1", "unit_amount": "1000.00"}],
+    )
+    issue_invoice(actor=accountant, invoice=invoice)
+    record_payment(
+        actor=accountant,
+        institution=institution,
+        student=student,
+        campus=campus,
+        amount="1000.00",
+        provider="mock",
+        provider_ref="mock-ref-mismatch",
+        allocations=[{"invoice": invoice, "amount": "1000.00"}],
+    )
+    payload = {
+        "event_id": "evt-mismatch",
+        "provider_ref": "mock-ref-mismatch",
+        "amount": "999.00",
+        "currency": "NGN",
+    }
+    signature = _webhook_signature("test-secret", payload)
+    resp = api_client.post(
+        "/api/v1/finance/webhooks/payments/mock/",
+        data=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+        content_type="application/json",
+        HTTP_X_WEBHOOK_SIGNATURE=signature,
+    )
+    assert resp.status_code == 400
+    event = PaymentWebhookEvent.objects.get(provider="mock", event_id="evt-mismatch")
+    assert event.processing_detail == "amount_or_currency_mismatch"

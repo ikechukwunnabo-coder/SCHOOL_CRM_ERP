@@ -647,21 +647,22 @@ No shared production administrator account should be used.
 
 **Approval:** Accepted. M3 and M4 are accepted; formal UAT/sign-off is complete and recorded by owner instruction; Q-003 is accepted/confirmed and the configurable effective-dated policies are the institutional baseline. This does not accept production controls, provider selections, or Phase 5+ modules; the containerized backend/Celery runtime and Celery/Redis integration were outside this acceptance and were validated locally afterwards (D-033).
 
-## D-034 — Phase 5 finance foundation slice (local, not M5 acceptance)
+## D-034 ? Phase 5 finance foundation slice (local, not M5 acceptance)
 
-**Decision:** Record the initial Phase 5 finance foundation backend slice as implemented and locally validated. This is not Milestone M5 acceptance and does not include portals, notifications, dashboards, payment-provider webhooks/reconciliation, or accounting/GL integration.
+**Decision:** Record the initial Phase 5 finance foundation backend slice as implemented and locally validated. This is not Milestone M5 acceptance and does not include portals, notifications, dashboards, real provider go-live/settlement reconciliation, or accounting/GL integration.
 
 **Scope implemented locally:**
-- New `apps.finance` domain: `FeeCategory`, `FeeSchedule`, `Invoice`, `InvoiceLine`, `Payment`, `PaymentAllocation`, `FinancialAdjustment`.
+- New `apps.finance` domain: `FeeCategory`, `FeeSchedule`, `Invoice`, `InvoiceLine`, `Payment`, `PaymentAllocation`, `FinancialAdjustment`, `PaymentWebhookEvent`.
 - Service-layer workflows: create/issue invoice, record payment with idempotency key and allocations, request/approve/apply adjustment; invoice balance/status recalculation; audit events for create/issue/payment/adjustment lifecycle.
 - Scoped DRF APIs under `/api/v1/finance/` with module RBAC grants seeded by `app_permissions.0009_seed_finance_permissions`; `FinanceError` mapped to conflict responses.
+- Local payment-provider adapter/mock webhook slice: signed `POST /api/v1/finance/webhooks/payments/{provider}/` (HMAC-SHA256 via `X-Webhook-Signature`), idempotent provider+event processing, amount/currency mismatch rejection, and server-verified payment/invoice reconciliation hooks.
 - Core identifier defaults extended for `invoice_number` and `receipt_number`; `YYYY` pattern support added while preserving existing admission/application/employee/transcript identifier patterns.
 
-**Validation:** Local direct Docker run passed: `ruff check apps config && python manage.py check && python manage.py makemigrations --check --dry-run && pytest -q && python manage.py verify_runtime && python manage.py verify_audit_chain` (**74 passed**, runtime/audit OK). Finance tests cover invoice issue/payment allocation balance updates, payment idempotency, adjustment approval-before-apply, and cross-institution IDOR denial.
+**Validation:** Local direct Docker run passed: `ruff check apps config && python manage.py check && python manage.py makemigrations --check --dry-run && pytest -q && python manage.py verify_runtime && python manage.py verify_audit_chain` (**77 passed**, runtime/audit OK). Finance tests cover invoice issue/payment allocation balance updates, payment idempotency, adjustment approval-before-apply, cross-institution IDOR denial, webhook idempotent verification, invalid signature rejection, and amount mismatch rejection.
 
 **Owner:** Product / Engineering / Finance
 
-**Approval:** Recorded locally on 2026-11-24 as implementation/validation evidence for a finance foundation slice only. M5 remains open until portal/provider/notification/dashboard/reconciliation/GL and acceptance criteria are completed and approved.
+**Approval:** Recorded locally on 2026-11-24 as implementation/validation evidence for a finance foundation slice only. M5 remains open until portal/provider-go-live/notification/dashboard/reconciliation/GL and acceptance criteria are completed and approved.
 
 ## D-033 — Container runtime and Celery/Redis validation
 

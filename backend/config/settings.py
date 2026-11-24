@@ -6,6 +6,7 @@ Baseline decisions: D-002, D-010, D-011, D-014.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import environ
@@ -266,6 +267,12 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = env.bool(
     "CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP", default=True
 )
 CELERY_BEAT_SCHEDULE_FILENAME = env("CELERY_BEAT_SCHEDULE_FILENAME", default="celerybeat-schedule")
+
+PAYMENT_WEBHOOK_SECRETS = {
+    k.removeprefix("PAYMENT_WEBHOOK_SECRET_").lower(): v
+    for k, v in os.environ.items()
+    if k.startswith("PAYMENT_WEBHOOK_SECRET_") and v
+}
 
 # Email
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")

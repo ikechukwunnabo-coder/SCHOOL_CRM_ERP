@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -16,6 +19,7 @@ from .models import (
     InvoiceLine,
     Payment,
     PaymentAllocation,
+    PaymentWebhookEvent,
 )
 
 
@@ -368,3 +372,183 @@ def apply_adjustment(*, actor, adjustment: FinancialAdjustment) -> FinancialAdju
         metadata={"type": adjustment.adjustment_type, "amount": str(adjustment.amount)},
     )
     return adjustment
+
+
+def _webhook_secret(provider: str) -> str:
+    secrets = getattr(settings, "PAYMENT_WEBHOOK_SECRETS", {}) or {}
+    return str(secrets.get(provider, ""))
+
+
+def verify_webhook_signature(*, provider: str, raw_body: bytes, signature: str) -> bool:
+    secret = _webhook_secret(provider)
+    if not secret or not signature:
+        return False
+    expected = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature.strip())
+
+
+class MockPaymentProvider:
+    name = "mock"
+
+    def verify_transaction(self, *, provider_ref: str, payload: dict | None = None) -> dict:
+        payload = payload or {}
+        return {
+            "provider": self.name,
+            "provider_ref": provider_ref,
+            "verified": bool(provider_ref),
+            "status": payload.get("status", "verified"),
+            "amount": payload.get("amount"),
+            "currency": payload.get("currency", "NGN"),
+        }
+
+
+PROVIDERS = {
+    "mock": MockPaymentProvider(),
+}
+
+
+def get_payment_provider(name: str):
+    provider = PROVIDERS.get((name or "").lower())
+    if provider is None:
+        raise FinanceError("payment_provider_unsupported")
+    return provider
+
+
+@transaction.atomic
+def process_payment_webhook(
+    *,
+    provider: str,
+    raw_body: bytes,
+    signature: str,
+    payload: dict,
+) -> PaymentWebhookEvent:
+    provider = (provider or "").lower()
+    event_id = str(payload.get("event_id") or payload.get("id") or "").strip()
+    if not event_id:
+        raise FinanceError("webhook_event_id_required")
+    signature_valid = verify_webhook_signature(
+        provider=provider, raw_body=raw_body, signature=signature
+    )
+
+    event, created = PaymentWebhookEvent.objects.select_for_update().get_or_create(
+        provider=provider,
+        event_id=event_id,
+        defaults={
+            "signature_valid": signature_valid,
+            "payload": payload,
+            "status": PaymentWebhookEvent.Status.RECEIVED,
+        },
+    )
+    if not created:
+        return event
+
+    if not signature_valid:
+        event.status = PaymentWebhookEvent.Status.FAILED
+        event.processing_detail = "invalid_signature"
+        event.processed_at = timezone.now()
+        event.save(update_fields=["status", "processing_detail", "processed_at", "updated_at"])
+        log_event(
+            "finance.payment_webhook_rejected",
+            target_type="finance.PaymentWebhookEvent",
+            target_id=event.pk,
+            metadata={"provider": provider, "event_id": event_id, "reason": "invalid_signature"},
+        )
+        return event
+
+    provider_ref = str(payload.get("provider_ref") or payload.get("reference") or "").strip()
+    idempotency_key = str(payload.get("idempotency_key") or "").strip()
+    amount = payload.get("amount")
+    institution_id = payload.get("institution")
+    payment = None
+    if provider_ref:
+        payment = Payment.objects.select_for_update().filter(
+            provider=provider, provider_ref=provider_ref
+        ).first()
+    if payment is None and idempotency_key and institution_id:
+        payment = Payment.objects.select_for_update().filter(
+            institution_id=institution_id, idempotency_key=idempotency_key
+        ).first()
+
+    if payment is None:
+        event.status = PaymentWebhookEvent.Status.IGNORED
+        event.processing_detail = "payment_not_found"
+        event.processed_at = timezone.now()
+        event.save(update_fields=["status", "processing_detail", "processed_at", "updated_at"])
+        return event
+
+    provider_client = get_payment_provider(provider)
+    verification = provider_client.verify_transaction(
+        provider_ref=provider_ref or payment.provider_ref, payload=payload
+    )
+    if not verification.get("verified"):
+        payment.status = Payment.Status.FAILED
+        payment.save(update_fields=["status", "updated_at"])
+        event.status = PaymentWebhookEvent.Status.FAILED
+        event.payment = payment
+        event.institution_id = payment.institution_id
+        event.processing_detail = "verification_failed"
+        event.processed_at = timezone.now()
+        event.save(
+            update_fields=[
+                "status",
+                "payment",
+                "institution",
+                "processing_detail",
+                "processed_at",
+                "updated_at",
+            ]
+        )
+        return event
+
+    verified_amount = Decimal(str(amount)) if amount is not None else payment.amount
+    payload_currency = str(payload.get("currency", payment.currency))
+    if verified_amount != payment.amount or payload_currency != payment.currency:
+        event.status = PaymentWebhookEvent.Status.FAILED
+        event.payment = payment
+        event.institution_id = payment.institution_id
+        event.processing_detail = "amount_or_currency_mismatch"
+        event.processed_at = timezone.now()
+        event.save(
+            update_fields=[
+                "status",
+                "payment",
+                "institution",
+                "processing_detail",
+                "processed_at",
+                "updated_at",
+            ]
+        )
+        return event
+
+    payment.status = Payment.Status.VERIFIED
+    if not payment.verified_at:
+        payment.verified_at = timezone.now()
+    payment.provider_ref = provider_ref or payment.provider_ref
+    payment.save(update_fields=["status", "verified_at", "provider_ref", "updated_at"])
+    for alloc in payment.allocations.select_for_update().select_related("invoice"):
+        _recalculate_invoice(alloc.invoice)
+
+    event.status = PaymentWebhookEvent.Status.PROCESSED
+    event.payment = payment
+    event.institution_id = payment.institution_id
+    event.processing_detail = "verified"
+    event.processed_at = timezone.now()
+    event.save(
+        update_fields=[
+            "status",
+            "payment",
+            "institution",
+            "processing_detail",
+            "processed_at",
+            "updated_at",
+        ]
+    )
+    log_event(
+        "finance.payment_webhook_processed",
+        target_type="finance.PaymentWebhookEvent",
+        target_id=event.pk,
+        institution_id=payment.institution_id,
+        campus_id=payment.campus_id,
+        metadata={"provider": provider, "event_id": event_id, "payment_id": str(payment.id)},
+    )
+    return event
