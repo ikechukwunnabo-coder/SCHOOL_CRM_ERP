@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 from decimal import Decimal
 
 from django.conf import settings
@@ -379,10 +380,15 @@ def _webhook_secret(provider: str) -> str:
     return str(secrets.get(provider, ""))
 
 
-def verify_webhook_signature(*, provider: str, raw_body: bytes, signature: str) -> bool:
+def verify_webhook_signature(
+    *, provider: str, raw_body: bytes, signature: str, payload: dict | None = None
+) -> bool:
     secret = _webhook_secret(provider)
     if not secret or not signature:
         return False
+    provider = (provider or "").lower()
+    if provider == "flutterwave":
+        return hmac.compare_digest(secret.strip(), signature.strip())
     expected = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature.strip())
 
@@ -402,8 +408,63 @@ class MockPaymentProvider:
         }
 
 
+class FlutterwavePaymentProvider:
+    name = "flutterwave"
+
+    def _headers(self) -> dict:
+        secret = getattr(settings, "PAYMENT_FLUTTERWAVE_SECRET_KEY", "")
+        return {"Authorization": f"Bearer {secret}", "Content-Type": "application/json"}
+
+    def verify_transaction(self, *, provider_ref: str, payload: dict | None = None) -> dict:
+        payload = payload or {}
+        secret = getattr(settings, "PAYMENT_FLUTTERWAVE_SECRET_KEY", "")
+        if not secret or not provider_ref:
+            return {
+                "provider": self.name,
+                "provider_ref": provider_ref,
+                "verified": False,
+                "status": "missing_secret_or_reference",
+            }
+        base_url = getattr(
+            settings,
+            "PAYMENT_FLUTTERWAVE_BASE_URL",
+            "https://api.flutterwave.com/v3",
+        ).rstrip("/")
+        url = f"{base_url}/transactions/verify_by_reference?tx_ref={provider_ref}"
+        try:
+            import urllib.request
+
+            req = urllib.request.Request(url, headers=self._headers(), method="GET")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            return {
+                "provider": self.name,
+                "provider_ref": provider_ref,
+                "verified": False,
+                "status": "verification_error",
+            }
+        data = body.get("data") or {}
+        status_value = str(data.get("status", "")).lower()
+        verified = body.get("status") == "success" and status_value in {
+            "successful",
+            "succeeded",
+            "verified",
+        }
+        return {
+            "provider": self.name,
+            "provider_ref": str(data.get("tx_ref") or provider_ref),
+            "verified": verified,
+            "status": status_value or "unknown",
+            "amount": data.get("amount"),
+            "currency": data.get("currency"),
+            "raw_status": body.get("status"),
+        }
+
+
 PROVIDERS = {
     "mock": MockPaymentProvider(),
+    "flutterwave": FlutterwavePaymentProvider(),
 }
 
 
@@ -427,7 +488,7 @@ def process_payment_webhook(
     if not event_id:
         raise FinanceError("webhook_event_id_required")
     signature_valid = verify_webhook_signature(
-        provider=provider, raw_body=raw_body, signature=signature
+        provider=provider, raw_body=raw_body, signature=signature, payload=payload
     )
 
     event, created = PaymentWebhookEvent.objects.select_for_update().get_or_create(

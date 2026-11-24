@@ -13,6 +13,8 @@ from apps.permissions.permissions import (
     IsCampusScoped,
     IsInstitutionScoped,
 )
+from apps.permissions.services import get_user_role_names
+from apps.students.models import StudentGuardian
 
 from . import services
 from .models import (
@@ -69,6 +71,19 @@ class ScopedFinanceViewSet(viewsets.ModelViewSet):
     }
     permission_classes = BASE
 
+    def _guardian_linked_student_ids(self):
+        user = self.request.user
+        return StudentGuardian.objects.filter(
+            guardian__user=user,
+            guardian__institution_id=user.institution_id,
+            portal_access=True,
+            student__institution_id=user.institution_id,
+        ).values_list("student_id", flat=True)
+
+    def _is_parent_portal_user(self):
+        user = self.request.user
+        return (not user.is_superuser) and "Parent/Guardian" in get_user_role_names(user)
+
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return self.queryset.none()
@@ -79,6 +94,12 @@ class ScopedFinanceViewSet(viewsets.ModelViewSet):
         qs = qs.filter(institution_id=user.institution_id)
         if user.campus_id and hasattr(self.queryset.model, "campus_id"):
             qs = qs.filter(campus_id=user.campus_id)
+        if self._is_parent_portal_user():
+            linked_student_ids = self._guardian_linked_student_ids()
+            if hasattr(self.queryset.model, "student_id"):
+                qs = qs.filter(student_id__in=linked_student_ids)
+            else:
+                qs = qs.none()
         return qs
 
     def handle_exception(self, exc):
@@ -88,6 +109,8 @@ class ScopedFinanceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        if self._is_parent_portal_user():
+            raise PermissionDenied("parent_portal_read_only")
         save_kwargs = {}
         if hasattr(serializer.Meta.model, "institution_id") and not user.is_superuser:
             save_kwargs["institution"] = user.institution
@@ -175,6 +198,8 @@ class InvoiceViewSet(ScopedFinanceViewSet):
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
+        if self._is_parent_portal_user():
+            raise PermissionDenied("parent_portal_read_only")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -197,6 +222,8 @@ class InvoiceViewSet(ScopedFinanceViewSet):
 
     @action(detail=True, methods=["post"])
     def issue(self, request, pk=None):
+        if self._is_parent_portal_user():
+            raise PermissionDenied("parent_portal_read_only")
         invoice = self.get_object()
         updated = services.issue_invoice(actor=request.user, invoice=invoice)
         return Response(self.get_serializer(updated).data)
@@ -254,6 +281,8 @@ class PaymentViewSet(ScopedFinanceViewSet):
         return super().get_serializer_class()
 
     def create(self, request, *args, **kwargs):
+        if self._is_parent_portal_user():
+            raise PermissionDenied("parent_portal_read_only")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -295,6 +324,8 @@ class FinancialAdjustmentViewSet(ScopedFinanceViewSet):
 
     def perform_create(self, serializer):
         actor = self.request.user
+        if self._is_parent_portal_user():
+            raise PermissionDenied("parent_portal_read_only")
         institution = serializer.validated_data.get("institution") or actor.institution
         if not actor.is_superuser and institution != actor.institution:
             raise PermissionDenied("cross_institution_access")
@@ -319,12 +350,16 @@ class FinancialAdjustmentViewSet(ScopedFinanceViewSet):
 
     @action(detail=True, methods=["post"])
     def approve(self, request, pk=None):
+        if self._is_parent_portal_user():
+            raise PermissionDenied("parent_portal_read_only")
         adjustment = self.get_object()
         updated = services.approve_adjustment(actor=request.user, adjustment=adjustment)
         return Response(self.get_serializer(updated).data)
 
     @action(detail=True, methods=["post"])
     def apply(self, request, pk=None):
+        if self._is_parent_portal_user():
+            raise PermissionDenied("parent_portal_read_only")
         adjustment = self.get_object()
         updated = services.apply_adjustment(actor=request.user, adjustment=adjustment)
         return Response(self.get_serializer(updated).data)
@@ -336,7 +371,9 @@ class PaymentWebhookViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path=r"(?P<provider>[^/.]+)")
     def receive(self, request, provider=None):
-        signature = request.headers.get("X-Webhook-Signature", "")
+        signature = request.headers.get("X-Webhook-Signature") or request.headers.get(
+            "verif-hash", ""
+        )
         raw_body = request.body or b""
         payload = request.data if isinstance(request.data, dict) else {}
         event = services.process_payment_webhook(

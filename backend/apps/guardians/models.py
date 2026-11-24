@@ -11,6 +11,13 @@ class Guardian(TimeStampedModel):
         on_delete=models.PROTECT,
         related_name="guardians",
     )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="guardian_profile",
+    )
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     phone = models.CharField(max_length=32)

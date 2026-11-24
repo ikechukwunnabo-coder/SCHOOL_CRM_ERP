@@ -17,9 +17,10 @@ from apps.finance.models import (
     PaymentWebhookEvent,
 )
 from apps.finance.services import create_invoice, issue_invoice, record_payment
+from apps.guardians.models import Guardian
 from apps.institutions.models import Campus, Institution
 from apps.permissions.models import Permission, Role, RolePermission, UserRole
-from apps.students.models import Student
+from apps.students.models import Student, StudentGuardian
 
 
 @pytest.fixture
@@ -370,3 +371,190 @@ def test_mock_webhook_amount_mismatch_is_rejected(
     assert resp.status_code == 400
     event = PaymentWebhookEvent.objects.get(provider="mock", event_id="evt-mismatch")
     assert event.processing_detail == "amount_or_currency_mismatch"
+
+
+@pytest.mark.django_db
+def test_parent_portal_sees_only_linked_student_finance(
+    api_client, institution, campus, session, student, accountant
+):
+    other_student = Student.objects.create(
+        institution=institution,
+        campus=campus,
+        admission_number="ADM-FIN-002",
+        first_name="Bola",
+        last_name="Okafor",
+        date_of_birth=__import__("datetime").date(2011, 2, 2),
+        admission_date=__import__("datetime").date(2026, 9, 1),
+        status=Student.LifecycleStatus.ENROLLED,
+    )
+    inv1 = create_invoice(
+        actor=accountant,
+        institution=institution,
+        campus=campus,
+        student=student,
+        session=session,
+        lines=[{"description": "Fee", "quantity": "1", "unit_amount": "1000.00"}],
+    )
+    inv2 = create_invoice(
+        actor=accountant,
+        institution=institution,
+        campus=campus,
+        student=other_student,
+        session=session,
+        lines=[{"description": "Fee", "quantity": "1", "unit_amount": "2000.00"}],
+    )
+    issue_invoice(actor=accountant, invoice=inv1)
+    issue_invoice(actor=accountant, invoice=inv2)
+
+    parent_user = get_user_model().objects.create_user(
+        email="parent@fin.test", password="Passw0rd!123", institution=institution, campus=campus
+    )
+    guardian = Guardian.objects.create(
+        institution=institution,
+        user=parent_user,
+        first_name="Parent",
+        last_name="User",
+        phone="08000000000",
+        email="parent@fin.test",
+    )
+    StudentGuardian.objects.create(
+        student=student,
+        guardian=guardian,
+        relationship="Mother",
+        is_primary=True,
+        portal_access=True,
+    )
+    role, _ = Role.objects.get_or_create(
+        name="Parent/Guardian", defaults={"is_system": True, "institution": institution}
+    )
+    UserRole.objects.get_or_create(
+        user=parent_user,
+        role=role,
+        scope_type=UserRole.ScopeType.OWN,
+        defaults={"is_active": True},
+    )
+    for perm in Permission.objects.filter(module="finance", verb__in=["view", "print"]):
+        RolePermission.objects.get_or_create(role=role, permission=perm)
+
+    api_client.force_authenticate(parent_user)
+    list_resp = api_client.get("/api/v1/finance/invoices/")
+    assert list_resp.status_code == 200
+    ids = {item["id"] for item in list_resp.data["results"]}
+    assert str(inv1.id) in ids
+    assert str(inv2.id) not in ids
+
+    detail_resp = api_client.get(f"/api/v1/finance/invoices/{inv2.id}/")
+    assert detail_resp.status_code == 404
+
+    create_resp = api_client.post(
+        "/api/v1/finance/payments/",
+        {
+            "institution": str(institution.id),
+            "student": str(student.id),
+            "amount": "100.00",
+        },
+        format="json",
+    )
+    assert create_resp.status_code == 403
+
+
+@override_settings(
+    PAYMENT_WEBHOOK_SECRETS={"flutterwave": "flw-hash"},
+    PAYMENT_FLUTTERWAVE_SECRET_KEY="flw-secret",
+    PAYMENT_FLUTTERWAVE_BASE_URL="https://api.flutterwave.test/v3",
+)
+@pytest.mark.django_db
+def test_flutterwave_webhook_verifies_and_is_idempotent(
+    api_client, institution, campus, student, accountant, session, monkeypatch
+):
+    invoice = create_invoice(
+        actor=accountant,
+        institution=institution,
+        campus=campus,
+        student=student,
+        session=session,
+        lines=[{"description": "Fee", "quantity": "1", "unit_amount": "1000.00"}],
+    )
+    issue_invoice(actor=accountant, invoice=invoice)
+    payment = record_payment(
+        actor=accountant,
+        institution=institution,
+        student=student,
+        campus=campus,
+        amount="1000.00",
+        provider="flutterwave",
+        provider_ref="tx-ref-1",
+        allocations=[{"invoice": invoice, "amount": "1000.00"}],
+    )
+    payment.status = Payment.Status.PENDING
+    payment.verified_at = None
+    payment.save(update_fields=["status", "verified_at", "updated_at"])
+
+    class FakeResp:
+        def read(self):
+            return json.dumps(
+                {
+                    "status": "success",
+                    "data": {
+                        "status": "successful",
+                        "tx_ref": "tx-ref-1",
+                        "amount": 1000.0,
+                        "currency": "NGN",
+                    },
+                }
+            ).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=10: FakeResp())
+
+    payload = {
+        "event_id": "flw-evt-1",
+        "provider_ref": "tx-ref-1",
+        "amount": "1000.00",
+        "currency": "NGN",
+    }
+    body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    resp1 = api_client.post(
+        "/api/v1/finance/webhooks/payments/flutterwave/",
+        data=body,
+        content_type="application/json",
+        HTTP_VERIF_HASH="flw-hash",
+    )
+    resp2 = api_client.post(
+        "/api/v1/finance/webhooks/payments/flutterwave/",
+        data=body,
+        content_type="application/json",
+        HTTP_VERIF_HASH="flw-hash",
+    )
+    assert resp1.status_code == 200
+    assert resp2.status_code == 200
+    payment.refresh_from_db()
+    invoice.refresh_from_db()
+    assert payment.status == Payment.Status.VERIFIED
+    assert invoice.status == Invoice.Status.PAID
+    assert (
+        PaymentWebhookEvent.objects.filter(provider="flutterwave", event_id="flw-evt-1").count()
+        == 1
+    )
+
+
+@override_settings(PAYMENT_WEBHOOK_SECRETS={"flutterwave": "flw-hash"})
+@pytest.mark.django_db
+def test_flutterwave_webhook_rejects_invalid_signature(api_client):
+    payload = {"event_id": "flw-bad", "provider_ref": "x", "amount": "1.00", "currency": "NGN"}
+    resp = api_client.post(
+        "/api/v1/finance/webhooks/payments/flutterwave/",
+        data=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+        content_type="application/json",
+        HTTP_VERIF_HASH="wrong",
+    )
+    assert resp.status_code == 400
+    event = PaymentWebhookEvent.objects.get(provider="flutterwave", event_id="flw-bad")
+    assert event.processing_detail == "invalid_signature"

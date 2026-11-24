@@ -8,6 +8,8 @@ from apps.audit.services import log_event
 
 from .models import Student, StudentGuardian, StudentLifecycleEvent
 
+PARENT_PORTAL_ROLE = "Parent/Guardian"
+
 Status = Student.LifecycleStatus
 
 
@@ -86,6 +88,46 @@ def change_lifecycle(
     return student
 
 
+def ensure_guardian_portal_role(*, guardian, institution):
+    user = getattr(guardian, "user", None)
+    if not user:
+        return
+    from apps.permissions.models import Role, UserRole
+
+    role, _ = Role.objects.get_or_create(
+        name=PARENT_PORTAL_ROLE,
+        institution=institution,
+        defaults={"is_system": True},
+    )
+    UserRole.objects.get_or_create(
+        user=user,
+        role=role,
+        scope_type=UserRole.ScopeType.OWN,
+        defaults={"is_active": True},
+    )
+
+
+def revoke_guardian_portal_role_if_unlinked(*, guardian, institution):
+    user = getattr(guardian, "user", None)
+    if not user:
+        return
+    has_access = StudentGuardian.objects.filter(
+        guardian=guardian,
+        student__institution=institution,
+        portal_access=True,
+    ).exists()
+    if has_access:
+        return
+    from apps.permissions.models import UserRole
+
+    UserRole.objects.filter(
+        user=user,
+        role__name=PARENT_PORTAL_ROLE,
+        role__institution=institution,
+        scope_type=UserRole.ScopeType.OWN,
+    ).update(is_active=False)
+
+
 def link_guardian(
     actor,
     student: Student,
@@ -110,6 +152,8 @@ def link_guardian(
                 authorized_pickup=authorized_pickup,
                 portal_access=portal_access,
             )
+            if portal_access:
+                ensure_guardian_portal_role(guardian=guardian, institution=student.institution)
     except IntegrityError as exc:
         raise StudentWorkflowError("guardian_already_linked") from exc
     log_event(
@@ -119,6 +163,10 @@ def link_guardian(
         target_id=link.pk,
         institution_id=student.institution_id,
         campus_id=student.campus_id,
-        change_summary={"guardian_id": str(guardian.pk), "relationship": relationship},
+        change_summary={
+            "guardian_id": str(guardian.pk),
+            "relationship": relationship,
+            "portal_access": portal_access,
+        },
     )
     return link

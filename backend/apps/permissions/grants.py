@@ -139,7 +139,14 @@ MODULE_GRANTS = {
     },
     "finance": {
         "view": ADMIN_ROLES
-        + (REGISTRAR, HOD, PRINCIPAL, VICE_PRINCIPAL, "Bursar/Accountant"),
+        + (
+            REGISTRAR,
+            HOD,
+            PRINCIPAL,
+            VICE_PRINCIPAL,
+            "Bursar/Accountant",
+            "Parent/Guardian",
+        ),
         "create": ADMIN_ROLES + ("Bursar/Accountant",),
         "update": ADMIN_ROLES + ("Bursar/Accountant",),
         "delete_or_archive": ADMIN_ROLES,
@@ -147,6 +154,12 @@ MODULE_GRANTS = {
         "reverse_or_refund": ADMIN_ROLES + ("Bursar/Accountant",),
         "export": ADMIN_ROLES + ("Bursar/Accountant", REGISTRAR),
         "print": ADMIN_ROLES
-        + (REGISTRAR, PRINCIPAL, VICE_PRINCIPAL, "Bursar/Accountant"),
+        + (
+            REGISTRAR,
+            PRINCIPAL,
+            VICE_PRINCIPAL,
+            "Bursar/Accountant",
+            "Parent/Guardian",
+        ),
     },
 }

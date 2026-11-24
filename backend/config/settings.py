@@ -268,11 +268,24 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = env.bool(
 )
 CELERY_BEAT_SCHEDULE_FILENAME = env("CELERY_BEAT_SCHEDULE_FILENAME", default="celerybeat-schedule")
 
+PAYMENT_PROVIDER = env("PAYMENT_PROVIDER", default="mock")
+PAYMENT_FLUTTERWAVE_SECRET_KEY = env("PAYMENT_FLUTTERWAVE_SECRET_KEY", default="")
+PAYMENT_FLUTTERWAVE_PUBLIC_KEY = env("PAYMENT_FLUTTERWAVE_PUBLIC_KEY", default="")
+PAYMENT_FLUTTERWAVE_WEBHOOK_SECRET_HASH = env(
+    "PAYMENT_FLUTTERWAVE_WEBHOOK_SECRET_HASH", default=""
+)
+PAYMENT_FLUTTERWAVE_BASE_URL = env(
+    "PAYMENT_FLUTTERWAVE_BASE_URL", default="https://api.flutterwave.com/v3"
+)
 PAYMENT_WEBHOOK_SECRETS = {
     k.removeprefix("PAYMENT_WEBHOOK_SECRET_").lower(): v
     for k, v in os.environ.items()
     if k.startswith("PAYMENT_WEBHOOK_SECRET_") and v
 }
+if PAYMENT_FLUTTERWAVE_WEBHOOK_SECRET_HASH:
+    PAYMENT_WEBHOOK_SECRETS.setdefault(
+        "flutterwave", PAYMENT_FLUTTERWAVE_WEBHOOK_SECRET_HASH
+    )
 
 # Email
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
