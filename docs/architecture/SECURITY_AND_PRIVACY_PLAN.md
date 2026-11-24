@@ -65,6 +65,7 @@
 - Pin dependencies and lockfiles; automated vulnerability/dependency scanning in CI; timely patching.
 - Hardened container/host configs, least-privilege service accounts, network segmentation as applicable, secrets manager/env-based config.
 - Backups encrypted/stored securely; tested restores; monitoring/alerting for anomalies and security events.
+- Local container runtime validation (D-033): `docker compose up -d --build backend celery celery_beat` and direct backend image build succeeded; health endpoint returns `{"status":"ok","database":"ok","cache":"ok"}`, with Redis cache via `REDIS_URL`/`django_redis.cache.RedisCache`. Compose sets `DJANGO_ENV=docker` so container DB config uses `POSTGRES_HOST=db` instead of host `.env` `DATABASE_URL`; entrypoint applies migrations and collects static files before exec (Celery commands skip both). This is local validation only and does not establish production controls.
 
 ## 10. Secure SDLC & Verification
 - Security requirements and threat-aware reviews in design (Phase 0 onward).
@@ -77,4 +78,4 @@
 - Finalize data retention schedule and incident response contacts/runbook (with Ops plan); D-011 secure-cookie/CSRF flow is implemented.
 - Provider DPAs and data residency/processing terms (integrations/storage).
 - M3/M4 acceptance gates: **closed** — formal UAT/sign-off on the locally validated security controls and Q-003 official policy confirmation recorded by owner instruction (D-032); remote CI evidence is green (`45218305149`).
-- Containerized backend/Celery runtime and Celery/Redis integration remain separate infrastructure validation items.
+- Containerized backend/Celery runtime and Celery/Redis integration: validated locally (D-033) and no longer open blockers; production orchestration, prefork tuning, monitoring and provider integrations remain separate production/Phase 5 concerns.

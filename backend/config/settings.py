@@ -27,6 +27,7 @@ ENV_FILE = BASE_DIR.parent / ".env"
 if ENV_FILE.exists():
     environ.Env.read_env(ENV_FILE)
 
+DJANGO_ENV = env("DJANGO_ENV", default="development")
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="insecure-dev-key-change-me")
 DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
@@ -107,8 +108,17 @@ DATABASES = {
     }
 }
 
-if env("DATABASE_URL", default=None):
+if DJANGO_ENV != "docker" and env("DATABASE_URL", default=None):
     DATABASES["default"] = env.db("DATABASE_URL")
+
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+    }
+}
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -245,6 +255,16 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
+CELERY_TASK_EAGER_PROPAGATES = env.bool("CELERY_TASK_EAGER_PROPAGATES", default=False)
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_ACKS_LATE = env.bool("CELERY_TASK_ACKS_LATE", default=True)
+CELERY_WORKER_PREFETCH_MULTIPLIER = env.int("CELERY_WORKER_PREFETCH_MULTIPLIER", default=1)
+CELERY_RESULT_EXPIRES = env.int("CELERY_RESULT_EXPIRES", default=86400)
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = env.bool(
+    "CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP", default=True
+)
+CELERY_BEAT_SCHEDULE_FILENAME = env("CELERY_BEAT_SCHEDULE_FILENAME", default="celerybeat-schedule")
 
 # Email
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")

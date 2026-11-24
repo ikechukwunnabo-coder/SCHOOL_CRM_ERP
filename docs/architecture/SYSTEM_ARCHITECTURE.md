@@ -82,13 +82,13 @@
 
 ## 5. Data & Storage
 - **PostgreSQL** primary relational DB: FKs, unique/check constraints, indexes, transactions, effective-dated/historical records, timestamps and actor refs where appropriate.
-- **Redis:** caching (authz-safe, freshness-aware) and Celery broker/result backend as configured.
+- **Redis:** caching (authz-safe, freshness-aware) and Celery broker/result backend as configured; cache operations via `django_redis.cache.RedisCache` at `REDIS_URL`, broker, result backend and task execution validated in the local Compose runtime (D-033).
 - **Object storage:** S3-compatible for private documents (confidential) and public CMS media (separated buckets/prefixes/policies); signed/expiring URLs or authenticated download endpoints for private files.
 - **Identifiers:** stable internal PKs (UUIDs where appropriate) + configurable human-readable immutable official IDs per Master Spec §26.
 
 ## 6. Integration & Async Processing
 - **Adapters:** provider-agnostic interfaces for payments, email, SMS, storage; credentials via env/secrets manager; webhook signature validation, idempotency, retries with backoff, failure inspection/replay, payment reconciliation.
-- **Celery:** bulk reports/exports, notifications, scheduled tasks (reminders, expiry checks), async heavy processing; idempotent tasks where possible.
+- **Celery:** bulk reports/exports, notifications, scheduled tasks (reminders, expiry checks), async heavy processing; idempotent tasks where possible. Locally validated: worker consumed and completed a dispatched `core.ping` task with result `{'status': 'ok'}`; beat runs with `PersistentScheduler` and schedule file `/var/lib/celery/celerybeat-schedule` persisted in the `celerybeat_data` volume (D-033).
 
 ## 7. Security Architecture (high-level)
 - HttpOnly/Secure/SameSite cookies (recommended) with CSRF for state changes; throttling/rate limits; strong password hashing; TLS in transit; encryption at rest via infra/storage controls.
@@ -97,7 +97,7 @@
 
 ## 8. Deployment Topology (target)
 - **Environments:** dev, staging, production with separate configs/secrets.
-- **Containers:** Docker Compose for local dev; production via orchestrated containers/VMs as approved (Nginx reverse proxy → Gunicorn/Django, Celery workers/beat, PostgreSQL, Redis, object storage).
+- **Containers:** Docker Compose for local dev; production via orchestrated containers/VMs as approved (Nginx reverse proxy → Gunicorn/Django, Celery workers/beat, PostgreSQL, Redis, object storage). Local Compose runtime validated with `backend`, `celery` and `celery_beat`; Compose sets `DJANGO_ENV=docker` so container DB config uses `POSTGRES_HOST=db` instead of host `.env` `DATABASE_URL`, and the entrypoint applies migrations and collects static files before exec (Celery commands skip both). Worker uses `--pool=solo` locally because prefork hung in this Docker Desktop/WSL2 environment (D-033).
 - **Observability:** structured logs with correlation IDs, error monitoring/alerting, health checks.
 
 ## 9. Current implementation flows (M1–M4 backend)
@@ -112,6 +112,6 @@
 - Provider selections, storage provider config, and infra sizing (D-012–D-015, D-019).
 - M3 acceptance gates: closed — technical hardening implemented locally and formal UAT/sign-off recorded by owner instruction (D-032).
 - M4 acceptance gates: closed — technical hardening implemented locally, Q-003 official policy confirmation and formal UAT/sign-off recorded by owner instruction (D-032).
-- Containerized backend/Celery runtime validation remains open; database-level audit immutability is implemented and accepted with M3/M4.
+- Containerized backend/Celery runtime and Celery/Redis integration are validated locally and are no longer open blockers (D-033: direct and Compose image builds, healthy services, health endpoint DB/cache ok, `verify_runtime`, real `core.ping` execution, persisted beat schedule); production orchestration, prefork tuning, monitoring and provider integrations remain separate production/Phase 5 concerns. Database-level audit immutability is implemented and accepted with M3/M4.
 
 *This document is living architecture; implemented components are marked above and refined with each phase.*

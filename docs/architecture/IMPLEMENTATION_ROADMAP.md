@@ -1,7 +1,7 @@
 # Implementation Roadmap
 
 **Status:** Living roadmap (Phase 0 documented; Phase 1 foundation accepted; Phase 2/M2 accepted and closed per D-027; M3/M4 accepted with formal UAT/sign-off recorded and Q-003 confirmed per D-032). Sequenced by dependencies and Master Spec Phases 0–7.
-**Last updated:** 2026-11-23
+**Last updated:** 2026-11-24
 
 ## 1. Guiding Approach
 - Complete Phase 0 (this blueprint) with reviews/approvals before broad feature coding.
@@ -21,13 +21,13 @@
 - **Scope:** repo/project structure, backend/frontend scaffolds, env/config, Docker dev setup, institution/campus context, authn (per D-011), RBAC framework, audit framework, base UI system, CI pipeline, initial tests, OpenAPI scaffolding.
 - **Milestone M1:** authenticated user can log in (securely) to correct institution/campus context with enforced RBAC and audit of auth/security events; CI green.
 - **Dependencies:** D-010 (versions/lockfiles), D-011 (auth choice), D-014 (storage approach), core ERD for identity/tenancy.
-- **Status (2026-11-20):** **M1 accepted to proceed.** Implemented: Django/DRF scaffold, env-driven config, custom `accounts.User`, institutions/campus, permissions & audit app scaffolds/services, session+CSRF auth endpoints + basic frontend auth shell, initial migrations, CI workflow, backend/frontend dependency snapshots. Institution/campus-scoped read APIs enforce deny-by-default RBAC with object-level institution/campus checks and audited denials; audit service now redacts secrets, derives scope and logs write failures. RBAC role/permission matrix approved as MVP baseline (D-026). Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**15 passed**) against PostgreSQL 18; frontend build passed; remote CI green (`44763428401`); Postgres 18 + Redis 8 containers healthy. **Remaining hardening (non-blocking):** per-module RBAC grants/enforcement, containerized backend/Celery runtime (Docker Desktop image export stalls), Celery/Redis integration evidence, EOL/lockfile-tooling follow-ups.
+- **Status (2026-11-20):** **M1 accepted to proceed.** Implemented: Django/DRF scaffold, env-driven config, custom `accounts.User`, institutions/campus, permissions & audit app scaffolds/services, session+CSRF auth endpoints + basic frontend auth shell, initial migrations, CI workflow, backend/frontend dependency snapshots. Institution/campus-scoped read APIs enforce deny-by-default RBAC with object-level institution/campus checks and audited denials; audit service now redacts secrets, derives scope and logs write failures. RBAC role/permission matrix approved as MVP baseline (D-026). Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**15 passed**) against PostgreSQL 18; frontend build passed; remote CI green (`44763428401`); Postgres 18 + Redis 8 containers healthy. **Remaining hardening (non-blocking at M1):** per-module RBAC grants/enforcement and EOL/lockfile-tooling follow-ups; containerized backend/Celery runtime and Celery/Redis integration were validated locally later (D-033).
 
 ### Phase 2 — Student & Admissions (depends on M1)
 - **Scope:** enquiries, applications, admissions workflow, student profiles, guardian relationships, lifecycle transitions, document management, controlled imports groundwork.
 - **Milestone M2:** enquiry→application→approval→enrolment works end-to-end with unique admission number, no duplicate identity, linked guardians, audited transitions.
 - **Dependencies:** identity/ID generation, file storage (private), RBAC scopes.
-- **Status (2026-11-20):** **M2 accepted and closed (D-027).** Implemented identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle events, service-enforced workflows, duplicate-identity prevention, institution/campus-scoped APIs with module role grants, private document storage/import-validation groundwork, and audited transitions/denials. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**25 passed**) against PostgreSQL 18; remote CI green (`44769870049`) for the M2 slice and (`44775171408`) for closure commit `5bea736`. Provider-dependent production integrations and containerized backend/Celery runtime validation are tracked hardening items, not M2 blockers.
+- **Status (2026-11-20):** **M2 accepted and closed (D-027).** Implemented identifier sequences, enquiries/applications/decisions/documents, guardians, students/guardian links/lifecycle events, service-enforced workflows, duplicate-identity prevention, institution/campus-scoped APIs with module role grants, private document storage/import-validation groundwork, and audited transitions/denials. Validation: `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (**25 passed**) against PostgreSQL 18; remote CI green (`44769870049`) for the M2 slice and (`44775171408`) for closure commit `5bea736`. Provider-dependent production integrations remain tracked; containerized backend/Celery runtime and Celery/Redis integration were validated locally later (D-033), not M2 blockers.
 
 ### Phase 3 — Academic & Teaching (depends on M2)
 - **Scope:** academic sessions/terms, class levels/arms, subjects/offerings, employee/teacher records (base), subject-teacher allocations (effective-dated/history), draft/versioned timetables with add-slot conflict checks, student offering-based attendance (teacher attendance remains planned).
@@ -52,7 +52,7 @@
 - **Dependencies:** storage for public media, RBAC for CMS roles.
 
 ### Phase 7 — Hardening & Production Readiness (depends on M1–M6)
-- **Scope:** security review, performance/load testing vs targets, accessibility (WCAG 2.2 AA) checks, backup/restore drill, data import validation, UAT, deployment/ops/runbooks, admin/user guides, release checklist.
+- **Scope:** security review, performance/load testing vs targets, accessibility (WCAG 2.2 AA) checks, backup/restore drill, data import validation, UAT, deployment/ops/runbooks, admin/user guides, release checklist, production orchestration/sizing and prefork tuning, monitoring/alerting. Local container runtime validation is already recorded in D-033.
 - **Milestone M7 (MVP Release Candidate):** MVP acceptance criteria satisfied (Master Spec §38), restore demonstrated, docs complete, known limitations recorded.
 - **Gate:** production release approval.
 
@@ -74,7 +74,7 @@
 | Complex domain rules (grading/transcripts/finance) | Correctness/audit risk | Configurable rules, controlled services, strong tests |
 | Q-003 official grading/CA/promotion/workload/report-card policy | Accepted (D-032) | Configurable effective-dated policies are the accepted institutional baseline; future changes follow policy change control |
 | M3/M4 closure remote CI evidence | Evidence closed | Commit `a7cfb58` passed run `45218305149` after initial `45217310279` missing-migration failure was fixed |
-| Containerized backend/Celery runtime and Celery/Redis integration | Infrastructure validation gap | Validate separately from M3/M4 technical hardening |
+| Containerized backend/Celery runtime and Celery/Redis integration | Local validation closed (D-033); production orchestration remains separate | Direct and Compose backend image builds, healthy services, health endpoint DB/cache ok, `verify_runtime`, real `core.ping` execution, persisted beat schedule; production prefork tuning, monitoring and provider integrations remain Phase 5/production concerns |
 | Data migration quality | Go-live integrity | Dry-run, validation, reconciliation, audit |
 
 ## 6. MVP Acceptance Alignment

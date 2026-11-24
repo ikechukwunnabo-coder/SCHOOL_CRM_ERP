@@ -1,10 +1,10 @@
 # DECISIONS REGISTER
 ## School CRM & ERP Platform
 
-**Phase:** Living implementation governance (Phase 0 baseline through M3/M4 acceptance recorded in D-032)
+**Phase:** Living implementation governance (Phase 0 baseline through M3/M4 acceptance recorded in D-032 and local runtime validation recorded in D-033)
 **Document status:** Approved for implementation and acceptance — M1 accepted, Phase 2/M2 closed, M3/M4 accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032)
 **Authoritative specification:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`  
-**Revision date:** 23 November 2026
+**Revision date:** 24 November 2026
 **Primary backend runtime:** Python 3.14.x (D-010 validated in Phase 1 scaffold/CI on 2026-11-20)  
 **Architecture:** Modular monolith, API-first
 
@@ -60,7 +60,7 @@ The following decisions establish the initial project direction and are approved
 - Django 5.2 supports Python 3.14 from version 5.2.8.
 - Django REST Framework documents Python 3.14 and Django 5.2 compatibility.
 - Psycopg 3 supports Python 3.14 and PostgreSQL versions through PostgreSQL 18.
-- Celery 5.7 supports Python 3.11 and newer. The exact Celery, Kombu and Redis combination must be smoke-tested as part of the still-open Celery/Redis integration validation; it is outside the M3/M4 acceptance recorded in D-032.
+- Celery 5.7 supports Python 3.11 and newer. The exact Celery, Kombu and Redis combination was smoke-tested in the local containerized runtime and is no longer an open validation item (D-033); this is outside the M3/M4 acceptance recorded in D-032.
 - PostgreSQL 18 is a supported production release.
 
 Official references:
@@ -581,7 +581,7 @@ No shared production administrator account should be used.
 **Evidence:** M2 slice commit `e379bef` / remote CI `44769870049` and closure commit `5bea736` / remote CI `44775171408` (frontend and backend green), local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, and `pytest -q` (25 tests at closure) against PostgreSQL 18.
 
 **Owner:** Product / School Management  
-**Approval:** Approved on 2026-11-20; permission granted to close Phase 2 and proceed to Phase 3 (Academic & Teaching). Provider-dependent production integrations and containerized backend/Celery runtime validation remain tracked hardening items and do not block M3.
+**Approval:** Approved on 2026-11-20; permission granted to close Phase 2 and proceed to Phase 3 (Academic & Teaching). Provider-dependent production integrations remained tracked hardening items and did not block M3; containerized runtime and Celery/Redis integration were validated locally later (D-033).
 
 ## D-028 — Phase 3 M3 implementation status (historical implementation-status decision; acceptance recorded in D-032)
 
@@ -632,7 +632,7 @@ No shared production administrator account should be used.
 
 **Local evidence:** `ruff check apps config` pass; `python manage.py check` pass; `python manage.py makemigrations --check --dry-run` pass; `pytest -q` -> 68 passed against PostgreSQL 18; `python manage.py verify_audit_chain` -> valid; `npm run lint` pass; `npm test` -> 17 passed; `npm run build` pass; `npm run test:e2e` -> 2 passed. CI configuration now includes backend audit-chain verification and frontend lint/E2E.
 
-**Remote CI:** Closure run `45217310279` failed because CI did not migrate the service database before audit verification; `a7cfb58` added the migrate step and rerun `45218305149` passed. Containerized backend/Celery runtime and Celery/Redis integration remain separate outstanding infrastructure validation items.
+**Remote CI:** Closure run `45217310279` failed because CI did not migrate the service database before audit verification; `a7cfb58` added the migrate step and rerun `45218305149` passed. Containerized backend/Celery runtime and Celery/Redis integration were separate outstanding items at the time and were subsequently validated locally (D-033).
 
 **Owner:** Product / Engineering / School Management
 **Approval:** Historical implementation-status decision (not an acceptance decision at the time). It remains the recorded evidence baseline for the acceptance in D-032; formal UAT/sign-off and Q-003 are complete.
@@ -645,7 +645,24 @@ No shared production administrator account should be used.
 
 **Evidence:** D-031 closure scope and local validation (`ruff check apps config`, `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `pytest -q` -> 68 passed against PostgreSQL 18, `python manage.py verify_audit_chain` valid, `npm run lint`, `npm test` -> 17 passed, `npm run build`, `npm run test:e2e` -> 2 mocked specs passed); remote CI run `45218305149` at commit `a7cfb58` and docs CI run `45219480024`. The initial failed closure run `45217310279` (missing CI database migration, subsequently fixed by `a7cfb58`) is retained only as historical evidence.
 
-**Approval:** Accepted. M3 and M4 are accepted; formal UAT/sign-off is complete and recorded by owner instruction; Q-003 is accepted/confirmed and the configurable effective-dated policies are the institutional baseline. This does not accept the still-open containerized backend/Celery runtime, Celery/Redis integration, production controls, provider selections, or Phase 5+ modules.
+**Approval:** Accepted. M3 and M4 are accepted; formal UAT/sign-off is complete and recorded by owner instruction; Q-003 is accepted/confirmed and the configurable effective-dated policies are the institutional baseline. This does not accept production controls, provider selections, or Phase 5+ modules; the containerized backend/Celery runtime and Celery/Redis integration were outside this acceptance and were validated locally afterwards (D-033).
+
+## D-033 — Container runtime and Celery/Redis validation
+
+**Decision:** Close the previously open containerized backend/Celery runtime and Celery/Redis integration validation gap with local validation evidence; they are no longer open blockers. Production orchestration, prefork tuning, monitoring and provider integrations remain separate production/Phase 5 concerns. This is not a production-readiness claim.
+
+**Scope validated locally:**
+- Backend image built directly (`docker build -t school_crm_erp-backend:runtime -f backend/Dockerfile backend`) and via Compose (`docker compose up -d --build backend celery celery_beat`); both succeeded. Running/healthy: `school_erp_backend` healthy, `school_erp_celery` healthy, `school_erp_celery_beat` up, `school_erp_db` healthy, `school_erp_redis` healthy.
+- Health endpoint returns `{"status":"ok","database":"ok","cache":"ok"}`. Redis cache is configured via `REDIS_URL` using `django_redis.cache.RedisCache`.
+- Backend validation passed: `ruff check apps config`, `python manage.py check`, `python manage.py makemigrations --check --dry-run`, 70 backend tests (`pytest -q`), `python manage.py verify_runtime`, and `python manage.py verify_audit_chain` -> `Audit chain valid for global (0 entries)`. `verify_runtime` checks database, Redis cache, Celery broker, result backend, and `core.ping` registration/execution.
+- A real Celery worker consumed and completed a dispatched `core.ping` task with result `{'status': 'ok'}`. Celery beat starts with `PersistentScheduler` and schedule file `/var/lib/celery/celerybeat-schedule` persisted in the `celerybeat_data` volume.
+- Docker entrypoint applies migrations, collects static files, then execs the command; Celery commands skip migrations/static. Compose sets `DJANGO_ENV=docker` so container DB config uses `POSTGRES_HOST=db` instead of host `.env` `DATABASE_URL=...localhost...`. Compose worker uses `--pool=solo` because prefork hung in this Docker Desktop/WSL2 environment; solo pool is the validated local Compose setting, and production prefork tuning remains a production-sizing item.
+
+**Evidence:** Local validation only; no CI run ID is claimed for this uncommitted work. Commands and results are also recorded in `TECHNOLOGY_COMPATIBILITY_MATRIX.md` and `README.md`.
+
+**Owner:** Product / Engineering / DevOps
+
+**Approval:** Recorded locally on 2026-11-24 as the validation baseline for the runtime gap. The gap is closed for local development/validation; production orchestration, prefork tuning, monitoring and provider integrations remain separate production/Phase 5 concerns. No production readiness is claimed.
 
 ---
 
@@ -759,7 +776,7 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-032 | Approved/recorded for implementation and acceptance (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028–D-031 record M3/M4 implementation and closure locally; D-032 records owner-approved M3/M4 acceptance and Q-003 confirmation; provider items remain pending) |
+| D-001–D-033 | Approved/recorded for implementation, acceptance and validation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028–D-031 record M3/M4 implementation and closure locally; D-032 records owner-approved M3/M4 acceptance and Q-003 confirmation; D-033 records local container runtime and Celery/Redis validation; provider items remain pending) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
@@ -768,7 +785,8 @@ Changing an approved decision requires a documented change request and impact as
 | Architecture validation | Blueprint reviewed/documented; enforced and refined during implementation and code review |
 | Formal owner approval evidence | Recorded in this register for baselines; M3/M4 formal UAT/sign-off recorded by owner instruction (D-032) |
 | Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; M3/M4 accepted with formal UAT/sign-off and Q-003 confirmation recorded (D-032) |
-| Testing | Closure evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass. Historical CI was green through transcript slice (`45149166162`); closure CI passed at `a7cfb58` (`45218305149`) after initial `45217310279` missing-migration failure was fixed (historical only); docs CI `45219480024` green; containerized backend runtime remains open |
+| Testing | Closure evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass; runtime validation adds 70 backend tests, `verify_runtime` pass and a real `core.ping` worker result (D-033). Historical CI was green through transcript slice (`45149166162`); closure CI passed at `a7cfb58` (`45218305149`) after initial `45217310279` missing-migration failure was fixed (historical only); docs CI `45219480024` green. The runtime/Celery validation is local only; no CI run ID is claimed for that uncommitted work |
+| Container runtime and Celery/Redis | Validated locally (D-033): direct and Compose backend image builds, healthy services, health endpoint DB/cache ok, `verify_runtime`, real `core.ping` execution, persisted beat schedule. No longer an open blocker; production orchestration/prefork tuning/monitoring remain separate |
 
 ---
 
@@ -780,7 +798,7 @@ The project may proceed now with:
 - M3/M4 UAT and owner sign-off are accepted and recorded by owner instruction (D-032) using the validated closure evidence in D-031; no further M3/M4 sign-off gate remains.
 - Q-003 official grading/CA/promotion/workload/report-card policy confirmation is accepted (D-032); configurable effective-dated policies are the institutional baseline, with future changes handled by policy change control.
 - Closure code is committed and remotely CI-green (`a7cfb58`, run `45218305149`); keep CI green on subsequent changes.
-- Completion of remaining infrastructure validation (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
+- Completion of remaining follow-ups (EOL/lockfile tooling) in parallel where non-blocking; containerized runtime and Celery/Redis integration are validated locally (D-033). Production orchestration, prefork tuning, monitoring and provider integrations remain separate production/Phase 5 concerns.
 - Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
 - Continued refinement of ERD/data dictionary, RBAC, and API details as code is developed.
 

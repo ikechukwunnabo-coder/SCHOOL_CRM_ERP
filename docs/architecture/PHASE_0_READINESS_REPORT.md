@@ -5,7 +5,7 @@
 **Authoritative spec:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md` (1,828 lines)  
 **Phase reference:** `# PHASE 0.md`
 
-> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1/M1 is accepted, Phase 2/M2 is closed, and the Phase 3/M3 academic/teaching and Phase 4/M4 examinations/transcript backend slices are accepted with formal UAT/sign-off recorded by owner instruction and Q-003 confirmed (D-032). See `README.md`, `IMPLEMENTATION_ROADMAP.md`, `DECISIONS_REGISTER.md` (D-026–D-032), and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
+> **Status distinction (historical Phase 0 snapshot):** At the time this report was drafted, the architecture documents were **DOCUMENTED** only and nothing had been implemented or tested. This is no longer current: Phase 1/M1 is accepted, Phase 2/M2 is closed, and the Phase 3/M3 academic/teaching and Phase 4/M4 examinations/transcript backend slices are accepted with formal UAT/sign-off recorded by owner instruction and Q-003 confirmed (D-032). See `README.md`, `IMPLEMENTATION_ROADMAP.md`, `DECISIONS_REGISTER.md` (D-026–D-033, including local container runtime validation in D-033), and `TECHNOLOGY_COMPATIBILITY_MATRIX.md` for current status and validation evidence.
 
 ## 1. Executive Summary
 Phase 0 discovery artifacts have been drafted to translate the master specification into an implementation-ready blueprint. Core architecture, domain boundaries, ERD/data dictionary, RBAC, workflows, API conventions, and plans for technology, integrations, security, testing, deployment, and roadmap are documented. However, multiple material decisions require verification/approval and external inputs (versions, auth finalization, providers/credentials, infra, school-specific rules). **Recommendation: CONDITIONAL GO** for Release 1 development, contingent on resolving/approving the gating items in §4 and §6.
@@ -25,7 +25,7 @@ Phase 0 discovery artifacts have been drafted to translate the master specificat
 | 9 | Integration Specifications | `docs/architecture/INTEGRATION_SPECIFICATIONS.md` | Documented; provider integrations pending |
 | 10 | Security & Privacy Plan | `docs/architecture/SECURITY_AND_PRIVACY_PLAN.md` | Living (M1–M4 controls implemented locally incl. object-level scoping and tamper-evident audit chain; production controls pending) |
 | 11 | Test Strategy | `docs/architecture/TEST_STRATEGY.md` | Living (M3/M4 closure local evidence: 68 backend tests, 17 Vitest tests, 2 mocked Playwright specs) |
-| 12 | Deployment & Operations Plan | `docs/architecture/DEPLOYMENT_AND_OPERATIONS_PLAN.md` | Documented; runtime/production validation pending |
+| 12 | Deployment & Operations Plan | `docs/architecture/DEPLOYMENT_AND_OPERATIONS_PLAN.md` | Documented; local container runtime validated (D-033), production validation pending |
 | 13 | Implementation Roadmap | `docs/architecture/IMPLEMENTATION_ROADMAP.md` | Living (M3/M4 accepted with formal UAT/sign-off and Q-003 confirmation recorded per D-032) |
 
 Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
@@ -36,7 +36,7 @@ Supporting context (pre-existing): `gaps.md`, `GAPS2.MD`.
 - D-001..D-009: v1 scope (Nursery/Primary/Secondary, Nigeria NGN/en-NG/Africa/Lagos), single institution multi-campus (future multi-institution ready), integrated CMS, modular monolith, core stack families, MVP 18-item scope, alumni linkage + cumulative transcripts from approved historical records. *See `DECISIONS_REGISTER.md`.*
 
 ### 3.2 Decision status (current)
-- **D-010/D-011/D-020** validated/implemented in M1 with non-blocking follow-ups (lockfile tooling, containerized runtime, dependency map refinement).
+- **D-010/D-011/D-020** validated/implemented in M1 with non-blocking follow-ups (lockfile tooling, dependency map refinement); containerized runtime and Celery/Redis integration were validated locally later (D-033).
 - **D-012/D-013/D-015/D-019** provider/infra-dependent; adapters/mocks and targets approved, production validation pending (Q-001/Q-002/Q-005).
 - **D-014** local private storage/imports implemented in Phase 2 closure; S3-compatible provider config pending.
 - **D-016/D-018** academic rules and import tooling: M3/M2 slices implemented; Q-003 policy confirmation accepted per D-032 (configurable effective-dated policies are the accepted baseline); legacy mappings still pending (Q-004).
@@ -101,6 +101,6 @@ Per `IMPLEMENTATION_ROADMAP.md`: **Phase 0 (done: documented)** → Phase 1 Foun
 - **Documented:** Phase 0 deliverables (13) and readiness report drafted in `docs/architecture/`, with current status notes added as implementation progressed.
 - **Approved:** Baseline decisions D-001–D-021 documented; D-010 validated; D-026 RBAC baseline approved; D-027 Phase 2/M2 closed; D-028/D-029/D-030 record M3/M4 implemented locally; D-031 records closure of the listed hardening gaps; D-032 records M3/M4 acceptance and Q-003 confirmation.
 - **Implemented:** M1 foundation, M2 student/admissions vertical slice, M3 academic/teaching/attendance hardening, M4 examinations/results/report-card/transcript/alumni hardening, DB-level tamper-evident audit chain, and frontend M3/M4 workflows. M3/M4 are accepted with formal UAT/sign-off recorded by owner instruction and Q-003 confirmed (D-032).
-- **Tested:** Local closure evidence: 68 backend tests pass against PostgreSQL 18, `verify_audit_chain` valid, 17 Vitest tests and 2 mocked Playwright specs pass, lint/build green. Historical remote CI was green through the transcript slice (`45149166162`); closure remote CI passed at `a7cfb58` (`45218305149`) after initial failure `45217310279` was fixed by adding the CI database migration. Production runtime validation remains open.
+- **Tested:** Local closure evidence: 68 backend tests pass against PostgreSQL 18, `verify_audit_chain` valid, 17 Vitest tests and 2 mocked Playwright specs pass, lint/build green. Historical remote CI was green through the transcript slice (`45149166162`); closure remote CI passed at `a7cfb58` (`45218305149`) after initial failure `45217310279` was fixed by adding the CI database migration. Containerized backend/Celery runtime and Celery/Redis integration are validated locally (D-033; local evidence only, no CI run ID claimed for that uncommitted work); production runtime/orchestration validation remains open.
 
-*Next action:* M3/M4 UAT/sign-off and Q-003 confirmation are recorded (D-032); complete the remaining infrastructure validation and keep unresolved provider and infra decisions tracked in `DECISIONS_REGISTER.md`.
+*Next action:* M3/M4 UAT/sign-off and Q-003 confirmation are recorded (D-032), and local container runtime validation is recorded (D-033); complete remaining production infrastructure/orchestration validation and keep unresolved provider and infra decisions tracked in `DECISIONS_REGISTER.md`.

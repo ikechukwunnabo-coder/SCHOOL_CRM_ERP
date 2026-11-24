@@ -7,5 +7,6 @@ def test_health_endpoint():
     client = APIClient()
     resp = client.get("/api/v1/health/")
     assert resp.status_code == 200
-    assert "status" in resp.data
-    assert "database" in resp.data
+    assert resp.data["status"] == "ok"
+    assert resp.data["database"] == "ok"
+    assert resp.data["cache"] == "ok"
