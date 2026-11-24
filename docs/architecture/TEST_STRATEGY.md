@@ -1,6 +1,6 @@
 # Test Strategy
 
-**Status:** Living strategy. Testing is mandatory; the M3/M4 closure has local and remote CI evidence of 68 backend tests, 17 Vitest tests, and 2 mocked Playwright specs (`45218305149`). M3/M4 remain not accepted pending formal UAT/sign-off and Q-003.
+**Status:** Living strategy. Testing is mandatory; the M3/M4 closure has local and remote CI evidence of 68 backend tests, 17 Vitest tests, and 2 mocked Playwright specs (`45218305149`). M3/M4 are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032).
 
 ## 1. Objectives & Quality Gates
 - Verify correctness of business rules, workflows, calculations, and data integrity.
@@ -44,7 +44,7 @@ Critical journeys (per Master Spec):
 
 Additional E2E as implemented: ID card generate/verify/revoke, inventory receive/issue/adjust (no unapproved negative), procurement receive routing to stock vs asset.
 
-**Local evidence:** 2 mocked Playwright specs (`m3-workflow.spec.ts`, `m4-workflow.spec.ts`) pass via `npm run test:e2e`; they are mocked UI/workflow coverage, not live-integration or UAT evidence.
+**Local evidence:** 2 mocked Playwright specs (`m3-workflow.spec.ts`, `m4-workflow.spec.ts`) pass via `npm run test:e2e`; they are mocked UI/workflow coverage; formal UAT/sign-off is recorded separately by owner instruction (D-032).
 
 ### 2.4 Non-Functional & Specialized
 - **Performance/load (planned):** validate initial targets (response times, ~100 concurrent users, report times) against agreed infra/data; async behavior for bulk jobs.

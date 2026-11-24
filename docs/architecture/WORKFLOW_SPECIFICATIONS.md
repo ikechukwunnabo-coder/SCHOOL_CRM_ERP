@@ -1,6 +1,6 @@
 # Workflow Specifications
 
-**Status:** Living workflow specification. M1–M2 workflows are implemented; M3 academic/teaching/attendance and M4 examinations/results/report-card/transcript/alumni workflows are implemented locally with the listed hardening gaps closed. Workflows are enforced by backend services with transactions, application-level audit logs and a DB-level tamper-evident audit chain. M3/M4 remain not accepted pending UAT/sign-off and Q-003; remaining Phase 4+ items stay blueprint-only.
+**Status:** Living workflow specification. M1–M2 workflows are implemented; M3 academic/teaching/attendance and M4 examinations/results/report-card/transcript/alumni workflows are implemented locally with the listed hardening gaps closed. Workflows are enforced by backend services with transactions, application-level audit logs and a DB-level tamper-evident audit chain. M3/M4 are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); remaining Phase 4+ items stay blueprint-only.
 
 ## 1. Admissions & Enrolment (M2 implemented)
 - **States (configurable):** `Enquiry → Application Started → Submitted → Under Review → Assessment/Interview → Approved → Offered → Accepted → Enrolled`; alt: Rejected, Withdrawn, Waitlisted, Deferred.
@@ -16,7 +16,7 @@
 ## 3. Subject–Teacher Allocation & Teaching (M3 implemented locally)
 - **Setup:** admin configures academic sessions/terms, class levels/arms, subjects/offerings, class enrolments, effective-dated teacher assignments, and institution-scoped configurable workload policies (replacing the hard-coded 40-hour cap).
 - **Validations:** timetable creation and `add-slot` reject teacher/class/room conflicts for the same session/term/day/period; reassignment preserves history. Slots support recurrence rule/interval/end date, and draft timetables move through `approve`, `publish`, and `revise` transitions; published records are not silently edited.
-- **Authority:** `my-assignments` returns the acting teacher's assignments; assignment/audit service methods and object-level querysets enforce teacher scope. Role/negative and cross-scope/IDOR API tests are implemented locally; M3 acceptance still requires UAT/sign-off and Q-003 where relevant.
+- **Authority:** `my-assignments` returns the acting teacher's assignments; assignment/audit service methods and object-level querysets enforce teacher scope. Role/negative and cross-scope/IDOR API tests are implemented locally; M3 acceptance is recorded with UAT/sign-off and Q-003 confirmation (D-032).
 
 ## 4. Attendance (M3 implemented locally)
 - **Capture:** student attendance sessions tied to a subject offering and date, with `open`, `expected-students`, `mark`, and `close` actions; statuses present/absent/late/excused. Teacher attendance marking/approval/query is implemented via `/api/v1/teacher-attendance/`; period-level capture, notifications, and summaries/exports remain planned.
@@ -25,13 +25,13 @@
 
 ## 5. Examinations, Results & Publication (M4 implemented locally)
 - **Implemented backend:** assessment schemes/components with max marks/weights and effective dates; effective-dated grading scales and `GradingPolicy` with configurable grade ranges/remarks and completeness/report-card rules; offering-scoped result entry with weighted score calculation; `submit`, `return-for-correction`, `approve`, `publish`, and `correct` services; correction history and re-approval; self-approval denial; application-level audit events.
-- **Configuration:** assessment schemes/components (CA/tests/exam/practical etc.), max marks/weights, dates, applicable scope, grading scale and policy effective-dated per level/period. No hardcoded universal structure; policy values are placeholders/defaults until Q-003 is confirmed.
+- **Configuration:** assessment schemes/components (CA/tests/exam/practical etc.), max marks/weights, dates, applicable scope, grading scale and policy effective-dated per level/period. No hardcoded universal structure; Q-003 is confirmed and the configurable effective-dated policies are the accepted institutional baseline (D-032).
 - **Entry:** assigned subject teacher enters marks (draft/bulk) for assigned scope only; validate ranges/max; detect missing/invalid; prevent duplicates per student/subject/assessment/period unless attempts allowed; record user/timestamps.
 - **Workflow:** `Draft → Submitted → Returned for Correction → Resubmitted → Approved → Published` (stages configurable, permissions/audit enforced).
   - Teachers cannot self-approve unless explicitly permitted.
   - Published/approved results **not** silently edited.
 - **Post-approval correction:** formal correction request → record reason, original vs revised, requester/reviewer/approver/timestamps; recalc totals/grades/positions/report cards via controlled services; preserve prior published versions.
-- **Calculation:** configurable weighting, totals, grade boundaries/descriptions/remarks, averages, ranking/positions (if enabled), promotion eligibility; documented rounding/tie rules. Current backend implements weighted totals and grade/remark lookup only; ranking and promotion policy remain pending.
+- **Calculation:** configurable weighting, totals, grade boundaries/descriptions/remarks, averages, ranking/positions (if enabled), promotion eligibility; documented rounding/tie rules. Current backend implements weighted totals and grade/remark lookup only; ranking and promotion feature implementation remains blueprint-only (Q-003 policy confirmation accepted per D-032).
 
 ## 6. Report Cards (M4 implemented locally; portals pending)
 - **Source:** approved & published results only (never draft/unapproved). The backend generates immutable-style JSON snapshots from published results, stores a document snapshot, and increments version on regeneration.
@@ -45,7 +45,7 @@
 - **Rules:** unique institution-scoped reference; private printable PDF; every transition is audited via `TranscriptEvent`; correction creates a new version/token/reference/PDF and marks the prior transcript `SUPERSEDED`; revocation invalidates verification; provisional labeling is used for incomplete records and official generation is blocked by default (`institution.settings.transcript_block_incomplete_official`) unless policy allows it.
 - **Verification:** public `POST /api/v1/transcripts/verify/` hashes the submitted token, records a `TranscriptVerification` outcome (`valid`, `invalid`, `revoked`, `superseded`, `invalid_state`), and returns minimal document status/metadata with no student personal data.
 - **Access:** authenticated private-document download endpoint with RBAC/institution/campus/object-level checks; short-lived signed URLs remain a future option.
-- **Lifecycle linkage:** graduation creates/links an alumni record in `apps.alumni` (student 1—0..1 alumni record, linked to the graduation lifecycle event); the read-only API is `/api/v1/alumni/records/`. Formal UAT/sign-off and Q-003 remain required for M4 acceptance.
+- **Lifecycle linkage:** graduation creates/links an alumni record in `apps.alumni` (student 1—0..1 alumni record, linked to the graduation lifecycle event); the read-only API is `/api/v1/alumni/records/`. Formal UAT/sign-off and Q-003 confirmation are recorded for M4 acceptance (D-032).
 
 ## 8. Finance (MVP: Fees, Invoices, Payments)
 - **Setup:** fee categories/schedules by class/campus/session/term; compulsory/optional; discounts/scholarships/bursaries; installments; due dates; authorized waivers/adjustments.

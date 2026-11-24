@@ -1,6 +1,6 @@
 # Security and Privacy Plan
 
-**Status:** Living plan. M1–M2 controls are implemented; M3/M4 add RBAC grants, privileged corrections, separation-of-duties checks, hash-only public verification, private PDF storage, object-level queryset scoping, DB-level immutable/tamper-evident audit chain, and role/negative plus cross-scope/IDOR tests. M3/M4 remain not accepted pending UAT/sign-off and Q-003; production controls remain open.
+**Status:** Living plan. M1–M2 controls are implemented; M3/M4 add RBAC grants, privileged corrections, separation-of-duties checks, hash-only public verification, private PDF storage, object-level queryset scoping, DB-level immutable/tamper-evident audit chain, and role/negative plus cross-scope/IDOR tests. M3/M4 are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); production controls remain open.
 
 ## 1. Security Objectives
 - Protect confidentiality, integrity, and availability of student, guardian, staff, medical, academic, and financial data.
@@ -30,7 +30,7 @@
 - **M3 implemented:** deny-by-default module/verb grants for `employees`, `academics`, `teaching`, `attendance`; `my-assignments` and attendance service methods enforce teacher-scoped checks; attendance corrections require reason and privileged approval grants.
 - **M4 implemented:** deny-by-default `examinations` grants; assigned-offering enforcement for teacher result entry; self-approval denial; exam-officer/principal approval and publication grants; reason-required corrections with preserved prior values.
 - **M4 transcript implemented:** deny-by-default `transcripts` grants; institution/campus-scoped querysets; request self-approval denial; reason-required rejection/correction/revocation; authenticated private PDF download; public token verification that stores only hashes and returns no student personal data.
-- **M3/M4 closure:** object-level queryset scoping is applied to implemented APIs; role/negative and cross-scope/IDOR tests cover M3/M4 grants. Canonical role names match the matrix with backward-compatible aliases (`Academic Head`, `Teacher`, `Principal`, `Principal/VP`). Formal UAT/sign-off and Q-003 remain before acceptance.
+- **M3/M4 closure:** object-level queryset scoping is applied to implemented APIs; role/negative and cross-scope/IDOR tests cover M3/M4 grants. Canonical role names match the matrix with backward-compatible aliases (`Academic Head`, `Teacher`, `Principal`, `Principal/VP`). Formal UAT/sign-off and Q-003 confirmation are recorded under D-032.
 
 ## 5. Application & API Security
 - Input validation (server-side authoritative), output encoding, parameterized ORM/queries (no raw SQL injection), safe file handling.
@@ -76,5 +76,5 @@
 - Confirm compliance/regulatory obligations applicable to the institution/jurisdiction.
 - Finalize data retention schedule and incident response contacts/runbook (with Ops plan); D-011 secure-cookie/CSRF flow is implemented.
 - Provider DPAs and data residency/processing terms (integrations/storage).
-- M3/M4 acceptance gates: formal UAT/sign-off on the locally validated security controls and Q-003 official grading-policy confirmation; remote CI evidence is green (`45218305149`).
+- M3/M4 acceptance gates: **closed** — formal UAT/sign-off on the locally validated security controls and Q-003 official policy confirmation recorded by owner instruction (D-032); remote CI evidence is green (`45218305149`).
 - Containerized backend/Celery runtime and Celery/Redis integration remain separate infrastructure validation items.

@@ -1,6 +1,6 @@
 # RBAC Permission Matrix
 
-**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented locally through M3/M4 hardening. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M4 modules, with object-level queryset scoping, canonical role names plus backward-compatible aliases, and role/negative plus cross-scope/IDOR API tests. M3/M4 remain not accepted pending UAT/sign-off and Q-003; approval thresholds and remaining domain-specific predicates continue to be refined.
+**Status:** Approved (2026-11-20) as the MVP authorization baseline; implemented locally through M3/M4 hardening. Deny-by-default. Configurable per-verb grants are enforced by `HasModuleVerbPermission` for institution/campus context and M1–M4 modules, with object-level queryset scoping, canonical role names plus backward-compatible aliases, and role/negative plus cross-scope/IDOR API tests. M3/M4 are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); approval thresholds and remaining domain-specific predicates continue to be refined.
 
 ## 1. Principles
 - **Deny-by-default:** no access unless explicitly granted.
@@ -65,7 +65,7 @@ All require audit records; some require second approver per institution policy (
 - HoD/Exam Officer granular review powers per school policy.
 - Parent/student request rights for transcripts/certificates and payable actions.
 - **M3/M4:** `academics`, `teaching`, `attendance`, `employees`, `examinations`, `transcripts`, and `alumni` module grants are seeded in data. Canonical role names match the matrix, with backward-compatible aliases (`Academic Head` → `Head of Department`, `Teacher` → `Subject Teacher`, `Principal` → `Principal/Head Teacher`, `Principal/VP` → `Principal/Head Teacher` + `Vice Principal/Deputy Head`).
-*Encode as configurable RBAC data and validate with negative authorization tests in each phase. M3/M4 role-name alignment and negative/cross-scope tests are closed locally; formal UAT/sign-off and Q-003 remain before acceptance.*
+*Encode as configurable RBAC data and validate with negative authorization tests in each phase. M3/M4 role-name alignment and negative/cross-scope tests are closed locally; formal UAT/sign-off and Q-003 confirmation are recorded under D-032.*
 
 ## 8. Implemented M3 enforcement notes
 - `employees`: `view/create/update` for admins/Registrar/Academic Head; `delete_or_archive`/`export` admin-only.
@@ -83,4 +83,4 @@ All require audit records; some require second approver per institution policy (
 - `transcripts`: `view/download/print` for admins/Registrar/Academic Head/Examination Officer/Principal-VP; `create` for admins/Registrar/Examination Officer; `update`/correction for admins/Registrar; `review` for admins/Academic Head/Examination Officer/Principal-VP; `approve` for admins/Examination Officer/Principal-VP; `issue_or_revoke` for admins/Registrar/Principal-VP; `delete_or_archive` admin-only.
 - Transcript services enforce institution/campus scope, deny request self-approval, require reasons for rejection/correction/revocation, and preserve prior versions/snapshots; public verification is hash-token-only and returns no student personal data.
 - Transcript API role/negative tests cover teacher denial and registrar request/generate/issue/download plus public verification; parent/student portal views remain unimplemented.
-- M4 closure adds object-level queryset scoping and cross-scope/IDOR tests, effective-dated grading policy, private PDF report-card download, and read-only graduation-linked alumni records via `/api/v1/alumni/records/`. These are validated locally, not accepted; Q-003 and UAT/sign-off remain.
+- M4 closure adds object-level queryset scoping and cross-scope/IDOR tests, effective-dated grading policy, private PDF report-card download, and read-only graduation-linked alumni records via `/api/v1/alumni/records/`. These are validated locally and accepted with formal UAT/sign-off and Q-003 confirmation recorded (D-032).

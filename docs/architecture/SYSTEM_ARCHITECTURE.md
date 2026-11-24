@@ -1,7 +1,7 @@
 # System Architecture
 
 **Project:** School CRM & ERP Platform  
-**Status:** Living architecture. M1/M2 are accepted; M3 modules and the M4 examinations/transcript backend are implemented locally with the listed hardening gaps closed but not accepted pending UAT/sign-off and Q-003; remaining Phase 4+ modules are proposed.
+**Status:** Living architecture. M1/M2 are accepted; M3 modules and the M4 examinations/transcript backend are implemented locally with the listed hardening gaps closed and are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); remaining Phase 4+ modules are proposed.
 **Baseline:** Modular monolith, API-first, one institution with multi-campus (future multi-institution ready), integrated CMS.
 
 ## 1. Architectural Style & Principles
@@ -106,12 +106,12 @@
 - M3 workflows → academics structure → effective-dated teaching assignments and configurable workload policies → timetable conflict/recurrence/publish service → offering-based student attendance and teacher attendance/corrections.
 - M4 workflows → assessment scheme/grading configuration and effective-dated grading policies → assigned-teacher result entry and weighted calculation → submit/return/approve/publish transitions with separation of duties → correction/re-approval history → published-only report-card snapshots and private PDF download.
 - M4 transcript workflows → transcript request/review/approval → published-result/completeness snapshot → private PDF with hash-token QR → issue/download → correction/revocation with supersession → public verification outcome logging.
-- M3/M4 hardening closure: object-level queryset scoping, canonical role names with aliases, configurable workload and grading policies, timetable recurrence/publish workflow, teacher attendance, DB-level immutable/tamper-evident audit chain, PDF report cards, graduation→alumni linkage, and frontend M3/M4 pages with unit/E2E coverage. Formal acceptance still requires UAT/sign-off and Q-003; parent/student portals remain Phase 5.
+- M3/M4 hardening closure: object-level queryset scoping, canonical role names with aliases, configurable workload and grading policies, timetable recurrence/publish workflow, teacher attendance, DB-level immutable/tamper-evident audit chain, PDF report cards, graduation→alumni linkage, and frontend M3/M4 pages with unit/E2E coverage. Formal acceptance is recorded with UAT/sign-off and Q-003 confirmation (D-032); parent/student portals remain Phase 5.
 
-## 10. Key Cross-Cutting Decisions (pending)
+## 10. Key Cross-Cutting Decisions (M3/M4 accepted; remaining items pending)
 - Provider selections, storage provider config, and infra sizing (D-012–D-015, D-019).
-- M3 acceptance gates: technical hardening implemented locally; formal UAT/sign-off remains.
-- M4 acceptance gates: technical hardening implemented locally; Q-003 official grading-policy confirmation and formal UAT/sign-off remain.
-- Database-level audit immutability and containerized backend/Celery runtime validation.
+- M3 acceptance gates: closed — technical hardening implemented locally and formal UAT/sign-off recorded by owner instruction (D-032).
+- M4 acceptance gates: closed — technical hardening implemented locally, Q-003 official policy confirmation and formal UAT/sign-off recorded by owner instruction (D-032).
+- Containerized backend/Celery runtime validation remains open; database-level audit immutability is implemented and accepted with M3/M4.
 
 *This document is living architecture; implemented components are marked above and refined with each phase.*

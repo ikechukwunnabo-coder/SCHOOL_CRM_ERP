@@ -1,14 +1,14 @@
 # DECISIONS REGISTER
 ## School CRM & ERP Platform
 
-**Phase:** Living implementation governance (Phase 0 baseline through M3/M4 acceptance-gap closure)
-**Document status:** Approved for implementation (conditional) — M1 accepted, Phase 2/M2 closed, M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003
+**Phase:** Living implementation governance (Phase 0 baseline through M3/M4 acceptance recorded in D-032)
+**Document status:** Approved for implementation and acceptance — M1 accepted, Phase 2/M2 closed, M3/M4 accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032)
 **Authoritative specification:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`  
 **Revision date:** 23 November 2026
 **Primary backend runtime:** Python 3.14.x (D-010 validated in Phase 1 scaffold/CI on 2026-11-20)  
 **Architecture:** Modular monolith, API-first
 
-> **Governance statement:** This register records decisions and approaches cleared for implementation. Approval of an architectural approach does **not** mean implementation, compatibility verification, or production acceptance is complete. No feature is considered implemented or tested merely because it appears in this document. D-010 was validated in Phase 1/CI with non-blocking follow-ups; external inputs (Q-001–Q-012) remain tracked and must be resolved before affected milestones, UAT, and production go-live.
+> **Governance statement:** This register records decisions and approaches cleared for implementation. Approval of an architectural approach does **not** mean implementation, compatibility verification, or production acceptance is complete. No feature is considered implemented or tested merely because it appears in this document. D-010 was validated in Phase 1/CI with non-blocking follow-ups; Q-003 is accepted/confirmed under D-032, and the remaining external inputs (Q-001–Q-002, Q-004–Q-012) remain tracked before affected milestones and production go-live.
 
 ---
 
@@ -60,7 +60,7 @@ The following decisions establish the initial project direction and are approved
 - Django 5.2 supports Python 3.14 from version 5.2.8.
 - Django REST Framework documents Python 3.14 and Django 5.2 compatibility.
 - Psycopg 3 supports Python 3.14 and PostgreSQL versions through PostgreSQL 18.
-- Celery 5.7 supports Python 3.11 and newer. The exact Celery, Kombu and Redis combination must be smoke-tested before acceptance.
+- Celery 5.7 supports Python 3.11 and newer. The exact Celery, Kombu and Redis combination must be smoke-tested as part of the still-open Celery/Redis integration validation; it is outside the M3/M4 acceptance recorded in D-032.
 - PostgreSQL 18 is a supported production release.
 
 Official references:
@@ -320,10 +320,10 @@ Requirements:
 
 WAEC and NECO-related structures must be configurable where required. Do not assume that external examination rules automatically define the school's internal grading policy.
 
-**Interim for implementation:** fully configurable/effective-dated structures with placeholder/default seed data only until school confirmation (Q-003). No hardcoded statutory rules.
+**Implementation baseline:** fully configurable/effective-dated structures; Q-003 school confirmation is accepted under D-032. No hardcoded statutory rules.
 
 **Owner:** Academic Management / Product  
-**Approval:** Approved approach for implementation. M3 now includes an institution-scoped, effective-dated configurable workload policy (no hard-coded 40-hour cap) and a configurable effective-dated `GradingPolicy`; both remain placeholder/default values until official rules are confirmed. Official grading/calendar policies remain pending (Q-003), required before results/transcript UAT and go-live.
+**Approval:** Approved approach for implementation and accepted policy baseline. M3 includes an institution-scoped, effective-dated configurable workload policy (no hard-coded 40-hour cap) and a configurable effective-dated `GradingPolicy`. Q-003 official grading/CA/promotion/workload/report-card policy confirmation is accepted (D-032); the existing configurable effective-dated policies are the accepted institutional baseline. No specific numeric policy values are asserted by this register.
 
 ## D-017 — Payroll and statutory calculations
 
@@ -583,42 +583,42 @@ No shared production administrator account should be used.
 **Owner:** Product / School Management  
 **Approval:** Approved on 2026-11-20; permission granted to close Phase 2 and proceed to Phase 3 (Academic & Teaching). Provider-dependent production integrations and containerized backend/Celery runtime validation remain tracked hardening items and do not block M3.
 
-## D-028 — Phase 3 M3 implementation status (hardening closed locally; not accepted)
+## D-028 — Phase 3 M3 implementation status (historical implementation-status decision; acceptance recorded in D-032)
 
-**Decision:** Record the Phase 3 Academic & Teaching vertical slice and its technical hardening as implemented locally. M3 remains **not accepted** pending formal UAT/sign-off and Q-003 institutional confirmation; the previously listed M3 gaps are no longer open implementation items.
+**Decision:** Record the Phase 3 Academic & Teaching vertical slice and its technical hardening as implemented locally. At the time of this decision M3 was **not yet accepted** pending formal UAT/sign-off and Q-003 institutional confirmation; those gates are now recorded as complete in D-032, and the previously listed M3 gaps are no longer open implementation items.
 
 **Scope implemented:** `employees`, `academics`, `teaching`, and `attendance` apps; academic sessions/terms, class levels/arms, subjects/offerings, class enrolments; effective-dated teacher assignments with reassignment history; draft/versioned timetable slots with recurrence and draft/approve/publish/revise workflow plus teacher/class/room conflict checks; institution-scoped configurable workload policy; teacher attendance; student offering-based attendance sessions/marking/corrections with privileged correction policy and application-level audit events; object-level queryset scoping; canonical RBAC role names with backward-compatible aliases; role/negative and cross-scope/IDOR API tests; M3 module/verb grants seeded via `0004_seed_phase3_permissions.py`.
 
 **Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and audit-chain verification pass against PostgreSQL 18. Historical M3 commit `d5c293a` passed remote CI run `45130273958` with 29 tests; closure CI passed at `a7cfb58` (`45218305149`) after initial run `45217310279` failed due to a missing CI migration.
 
 **Owner:** Product / Engineering
-**Approval:** Not an acceptance decision. M3 technical hardening is closed locally; formal UAT/sign-off and Q-003 remain required before acceptance.
+**Approval:** Historical implementation-status decision (not an acceptance decision at the time). M3 is now accepted under D-032 with formal UAT/sign-off recorded and Q-003 confirmed; this decision remains the implementation evidence baseline.
 
-## D-029 — Phase 4 M4 examinations backend slice (hardening closed locally; not accepted)
+## D-029 — Phase 4 M4 examinations backend slice (historical implementation-status decision; acceptance recorded in D-032)
 
-**Decision:** Record the Phase 4 Examinations backend slice and its technical hardening as implemented locally. M4 remains **not accepted** pending formal UAT/sign-off and Q-003 official grading-policy confirmation; the previously listed M4 gaps are no longer open implementation items.
+**Decision:** Record the Phase 4 Examinations backend slice and its technical hardening as implemented locally. At the time of this decision M4 was **not yet accepted** pending formal UAT/sign-off and Q-003 official grading-policy confirmation; those gates are now recorded as complete in D-032, and the previously listed M4 gaps are no longer open implementation items.
 
-**Scope implemented:** `examinations` app; assessment schemes/components; effective-dated grading scales and configurable effective-dated `GradingPolicy` (placeholder/default values until Q-003 is resolved); offering-scoped teacher result entry with weighted scoring; submit/return/approve/publish workflow with self-approval denial; correction records with prior-value preservation and re-approval; published-only report-card snapshots; PDF report cards with private storage/hash/snapshot and authenticated download; DB-level immutable/tamper-evident audit chain with hash verification; institution/campus-scoped and object-level querysets; role/negative and cross-scope/IDOR API tests; module/verb grants seeded via `0005_seed_phase4_permissions.py`.
+**Scope implemented:** `examinations` app; assessment schemes/components; effective-dated grading scales and configurable effective-dated `GradingPolicy` (placeholder/default seed at the time; Q-003 now accepted under D-032); offering-scoped teacher result entry with weighted scoring; submit/return/approve/publish workflow with self-approval denial; correction records with prior-value preservation and re-approval; published-only report-card snapshots; PDF report cards with private storage/hash/snapshot and authenticated download; DB-level immutable/tamper-evident audit chain with hash verification; institution/campus-scoped and object-level querysets; role/negative and cross-scope/IDOR API tests; module/verb grants seeded via `0005_seed_phase4_permissions.py`.
 
 **Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), and `verify_audit_chain` pass against PostgreSQL 18. Historical M4 commit `3f04813` passed remote CI run `45135466158` with 34 tests; closure CI passed at `a7cfb58` (`45218305149`) after initial run `45217310279` failed due to a missing CI migration.
 
 **Owner:** Product / Engineering
-**Approval:** Not an acceptance decision. M4 technical hardening is closed locally; official grading policy confirmation (Q-003) and formal UAT/sign-off remain required before transcript/report-card acceptance and go-live.
+**Approval:** Historical implementation-status decision (not an acceptance decision at the time). M4 is now accepted under D-032 with formal UAT/sign-off recorded and Q-003 official policy confirmation accepted; this decision remains the implementation evidence baseline.
 
-## D-030 — Phase 4 M4 transcript backend slice (hardening closed locally; not accepted)
+## D-030 — Phase 4 M4 transcript backend slice (historical implementation-status decision; acceptance recorded in D-032)
 
-**Decision:** Record the Phase 4 transcript backend slice, including graduation→alumni linkage and frontend coverage, as implemented locally. M4 remains **not accepted** pending formal UAT/sign-off and Q-003 official grading-policy confirmation.
+**Decision:** Record the Phase 4 transcript backend slice, including graduation→alumni linkage and frontend coverage, as implemented locally. At the time of this decision M4 was **not yet accepted** pending formal UAT/sign-off and Q-003 official grading-policy confirmation; those gates are now recorded as complete in D-032.
 
 **Scope implemented:** `transcripts` app; transcript request/review/approve/generate/issue/correct/revoke workflow; published-only result snapshots that preserve historical grading-scale content; completeness detection for missing/unpublished sessions and graduation records; private PDF generation with QR verification path; hash-only verification tokens with minimal public verification responses; version supersession that invalidates prior tokens while preserving prior PDFs/snapshots; institution/campus-scoped APIs; graduation→alumni linkage via `apps.alumni`; M3/M4 frontend pages with 17 Vitest tests and 2 mocked Playwright specs; module/verb grants seeded via `0006_seed_phase4_transcript_permissions.py` and `0008_seed_alumni_permissions.py`; application-level audit events; service/API role/negative and cross-scope/IDOR tests.
 
 **Evidence:** Local `ruff check apps config`, `manage.py check`, `makemigrations --check --dry-run`, `pytest -q` (68 tests for the closure suite), `npm run lint`, `npm test` (17 passed), `npm run build`, and `npm run test:e2e` (2 passed) all pass. Historical transcript commit `a603498` passed remote CI run `45149166162` with 39 tests; closure CI passed at `a7cfb58` (`45218305149`) after initial run `45217310279` failed due to a missing CI migration.
 
 **Owner:** Product / Engineering
-**Approval:** Not an acceptance decision. The transcript slice and closure work are validated locally; M4 remains not accepted pending Q-003 and formal UAT/sign-off.
+**Approval:** Historical implementation-status decision (not an acceptance decision at the time). The transcript slice and closure work are validated locally; M4 is now accepted under D-032 with formal UAT/sign-off recorded and Q-003 confirmed.
 
-## D-031 — M3/M4 acceptance-gap closure implemented locally; not accepted pending UAT/sign-off and Q-003
+## D-031 — M3/M4 acceptance-gap closure implemented locally (historical; superseded for acceptance by D-032)
 
-**Decision:** Record the previously listed M3/M4 technical hardening gaps as closed locally. This is an implementation-status decision only: M3 and M4 remain **not accepted** until formal UAT and owner sign-off are complete and Q-003 official grading-policy confirmation is received. Configurable workload, grading and report-card policies are placeholders/defaults until institutional values are confirmed.
+**Decision:** Record the previously listed M3/M4 technical hardening gaps as closed locally. This was an implementation-status decision only at the time: M3 and M4 are now **accepted** with formal UAT and owner sign-off recorded by owner instruction and Q-003 official policy confirmation accepted under D-032. Configurable workload, grading and report-card policies are the accepted institutional baseline.
 
 **Scope closed locally:**
 - Object-level queryset scoping plus role/negative and cross-scope/IDOR API tests for M3/M4 grants.
@@ -626,7 +626,7 @@ No shared production administrator account should be used.
 - Institution-scoped configurable workload policy; timetable recurrence and draft/approve/publish workflow; teacher attendance.
 - DB-level immutable/tamper-evident audit chain with sequenced hashes and a hash-verification management command.
 - PDF report cards with private storage, hash/snapshot metadata and authenticated download API.
-- Configurable effective-dated `GradingPolicy` with placeholder/default policy data pending Q-003.
+- Configurable effective-dated `GradingPolicy`; configurable effective-dated policies are the accepted institutional baseline (Q-003 confirmed in D-032).
 - Graduation→alumni linkage via new `apps.alumni`.
 - Frontend M3/M4 pages, 17 Vitest unit tests, and 2 mocked Playwright E2E specs.
 
@@ -635,7 +635,17 @@ No shared production administrator account should be used.
 **Remote CI:** Closure run `45217310279` failed because CI did not migrate the service database before audit verification; `a7cfb58` added the migrate step and rerun `45218305149` passed. Containerized backend/Celery runtime and Celery/Redis integration remain separate outstanding infrastructure validation items.
 
 **Owner:** Product / Engineering / School Management
-**Approval:** Not an acceptance decision. Formal UAT/sign-off and Q-003 remain required; no production acceptance is implied.
+**Approval:** Historical implementation-status decision (not an acceptance decision at the time). It remains the recorded evidence baseline for the acceptance in D-032; formal UAT/sign-off and Q-003 are complete.
+
+## D-032 — M3/M4 UAT/sign-off and Q-003 acceptance
+
+**Decision:** Accept Milestone M3 (Academic & Teaching) and Milestone M4 (Examinations, Results, Transcripts and Alumni) as formally accepted. Formal UAT/sign-off is recorded by owner instruction in this session, based on the validated closure evidence in D-031. Q-003 official grading/CA/promotion/workload/report-card policy confirmation is accepted at the governance level; the existing configurable effective-dated policies are the accepted institutional baseline. No specific grading-policy numeric values are introduced by this decision. This is an acceptance decision and supersedes the "not accepted" implementation-status framing in D-028–D-031 for acceptance purposes.
+
+**Owner:** Product / Engineering / School Management (owner instruction recorded in this session)
+
+**Evidence:** D-031 closure scope and local validation (`ruff check apps config`, `python manage.py check`, `python manage.py makemigrations --check --dry-run`, `pytest -q` -> 68 passed against PostgreSQL 18, `python manage.py verify_audit_chain` valid, `npm run lint`, `npm test` -> 17 passed, `npm run build`, `npm run test:e2e` -> 2 mocked specs passed); remote CI run `45218305149` at commit `a7cfb58` and docs CI run `45219480024`. The initial failed closure run `45217310279` (missing CI database migration, subsequently fixed by `a7cfb58`) is retained only as historical evidence.
+
+**Approval:** Accepted. M3 and M4 are accepted; formal UAT/sign-off is complete and recorded by owner instruction; Q-003 is accepted/confirmed and the configurable effective-dated policies are the institutional baseline. This does not accept the still-open containerized backend/Celery runtime, Celery/Redis integration, production controls, provider selections, or Phase 5+ modules.
 
 ---
 
@@ -645,7 +655,7 @@ No shared production administrator account should be used.
 |---|---|---|---|---|---|
 | Q-001 | Which payment gateway and merchant account will the school use? | Online payment go-live and reconciliation | Finance / Management | **Pending.** Interim: adapter interface + mock/sandbox in dev/CI (D-012). Required before staging/production payment go-live and reconciliation UAT. | No (tracked) |
 | Q-002 | Which email and SMS providers and sender identities are approved? | Notification delivery | IT / Operations | **Pending.** Interim: configurable providers with dev mail/SMS mocks (D-013). Required before production notification go-live. | No (tracked) |
-| Q-003 | What are the official grading scales, CA/exam weightings and promotion rules? | Results and transcripts | Academic Management | **Pending.** Interim: configurable/effective-dated structures and `GradingPolicy` with placeholder/default seed only (D-016/D-031). Required before results/transcript UAT, sign-off and go-live. | No (tracked) |
+| Q-003 | What are the official grading scales, CA/exam weightings and promotion rules? | Results and transcripts | Academic Management | **Accepted/confirmed (D-032).** Configurable effective-dated policies are the accepted institutional baseline; no specific numeric policy values are asserted here. | No (closed; change control) |
 | Q-004 | Are there existing student, staff, financial or academic records to migrate? | Migration planning | School Administration / IT | **Pending.** Interim: implement import tooling per spec (D-018); define mappings/reconciliation when sources known. Required before any production migration. | No (tracked) |
 | Q-005 | What hosting environment and infrastructure budget are available? | Deployment and sizing | Management / IT | **Pending.** Interim: local/dev scaffold and spec NFR targets (D-014/D-015/D-019). Required before staging/prod and SLO validation. | No (tracked) |
 | Q-006 | Are there institution-specific regulatory, examination-board or reporting requirements? | Compliance and reporting | Management | **Pending.** Interim: configurable reporting/retention/privacy controls per spec; incorporate specifics when provided. | No (tracked) |
@@ -656,7 +666,7 @@ No shared production administrator account should be used.
 | Q-011 | What are the approved campus structures and reporting hierarchy? | Institution and campus configuration | Management | **Pending.** Interim: configurable institution/campus structures (D-003/D-021); seed per confirmed data. | No (tracked) |
 | Q-012 | What existing systems must be integrated with the platform? | Integration design | IT / Management | **Pending.** Interim: adapter-based integration architecture per specs; scope/plan integrations when identified. | No (tracked) |
 
-Open questions must be assigned an owner and resolution deadline. An unresolved question must not be silently converted into an assumed institutional policy.
+Open questions must be assigned an owner and resolution deadline. An unresolved question must not be silently converted into an assumed institutional policy. Q-003 is resolved and recorded in D-032; future policy changes follow documented change control.
 
 ---
 
@@ -749,26 +759,26 @@ Changing an approved decision requires a documented change request and impact as
 |---|---|
 | Register documented | Yes |
 | Baseline decisions identified | Yes |
-| D-001–D-031 | Approved/recorded for implementation (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028–D-030 record M3/M4 implemented locally but not accepted; D-031 records closure of the listed hardening gaps locally; provider/school-policy items remain pending) |
+| D-001–D-032 | Approved/recorded for implementation and acceptance (D-010 validated in M1; D-026 approves the RBAC baseline; D-027 closes Phase 2/M2; D-028–D-031 record M3/M4 implementation and closure locally; D-032 records owner-approved M3/M4 acceptance and Q-003 confirmation; provider items remain pending) |
 | Python 3.14 selected as target | Yes — validated in Phase 1 scaffold/CI |
 | Exact dependency lockfiles | Committed and CI-verified (pip freeze + npm lock; `uv`/`pnpm` follow-up tracked) |
 | Provider selections | Pending external input (Q-001/Q-002, infra Q-005) — adapters/mocks approved for foundation |
-| School-specific academic policies | Pending confirmation (Q-003) — configurable `GradingPolicy`/workload placeholders/defaults in use |
+| School-specific academic policies | Q-003 accepted/confirmed (D-032) — configurable effective-dated policies are the accepted institutional baseline |
 | Infrastructure selection | Pending (Q-005) — targets/approach approved |
 | Architecture validation | Blueprint reviewed/documented; enforced and refined during implementation and code review |
-| Formal owner approval evidence | Recorded in this register for baselines; M3/M4 UAT/sign-off not yet recorded |
-| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003 |
-| Testing | Closure evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass. Historical CI was green through transcript slice (`45149166162`); closure CI passed at `a7cfb58` (`45218305149`) after initial `45217310279` missing-migration failure was fixed; containerized backend runtime pending |
+| Formal owner approval evidence | Recorded in this register for baselines; M3/M4 formal UAT/sign-off recorded by owner instruction (D-032) |
+| Implementation | Phase 1 foundation accepted; Phase 2 Student & Admissions vertical slice accepted; M3/M4 accepted with formal UAT/sign-off and Q-003 confirmation recorded (D-032) |
+| Testing | Closure evidence: 68 backend tests on PostgreSQL 18, audit-chain verification valid, 17 Vitest tests, 2 mocked Playwright specs, lint/build pass. Historical CI was green through transcript slice (`45149166162`); closure CI passed at `a7cfb58` (`45218305149`) after initial `45217310279` missing-migration failure was fixed (historical only); docs CI `45219480024` green; containerized backend runtime remains open |
 
 ---
 
 # 9. Phase 0 Readiness Recommendation
 
-**Recommended status: CONDITIONAL GO — Phase 1 foundation accepted; Phase 2/M2 accepted; M3/M4 technical hardening implemented locally but not accepted pending UAT/sign-off and Q-003**
+**Recommended status: GO — Phase 1 foundation accepted; Phase 2/M2 accepted; M3/M4 accepted with formal UAT/sign-off and Q-003 confirmation recorded (D-032)**
 
 The project may proceed now with:
-- Formal M3/M4 UAT and owner sign-off using the validated closure evidence recorded in D-031; do not record acceptance before sign-off.
-- Resolution of Q-003 official grading/CA/promotion policy and replacement of placeholder/default `GradingPolicy` values before results/transcript acceptance and go-live.
+- M3/M4 UAT and owner sign-off are accepted and recorded by owner instruction (D-032) using the validated closure evidence in D-031; no further M3/M4 sign-off gate remains.
+- Q-003 official grading/CA/promotion/workload/report-card policy confirmation is accepted (D-032); configurable effective-dated policies are the institutional baseline, with future changes handled by policy change control.
 - Closure code is committed and remotely CI-green (`a7cfb58`, run `45218305149`); keep CI green on subsequent changes.
 - Completion of remaining infrastructure validation (containerized backend/Celery runtime, Celery/Redis integration, EOL/lockfile follow-ups) in parallel where non-blocking.
 - Implementation of approved architectures/approaches (storage abstraction, adapters) without blocking on unselected providers.
@@ -783,12 +793,12 @@ Selection of payment, SMS, email or storage providers does not block provider-in
 3. Enforce and review database ERD/data dictionary and migrations as developed.
 4. Implement RBAC per the approved matrix with negative authorization tests.
 5. Finalize/refine backend application ownership and dependencies per D-020.
-6. Resolve Q-001–Q-012 and external inputs before affected milestones, UAT, and production go-live.
+6. Resolve the remaining external inputs (Q-001–Q-002, Q-004–Q-012; Q-003 accepted per D-032) before affected milestones and production go-live.
 7. Complete privacy, security, data retention, and operational readiness requirements before production.
 8. Confirm MVP acceptance criteria with passing tests and documented evidence.
 
 **Final governance principle:**
 
-A documented decision is not automatically an implemented system. An implemented feature is not a tested feature. A tested feature is not accepted for production until the appropriate owner has reviewed and approved it.
+A documented decision is not automatically an implemented system. An implemented feature is not a tested feature. A tested feature is not accepted for production until the appropriate owner has reviewed and approved it; for M3/M4 that approval is recorded in D-032.
 
 **Authoritative project reference:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`.

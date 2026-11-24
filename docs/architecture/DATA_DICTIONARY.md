@@ -1,6 +1,6 @@
 # Data Dictionary
 
-**Status:** Living dictionary. M1/M2 fields, M3 academic/teaching/attendance fields, and M4 examinations/results/report-card/transcript/alumni fields are implemented in migrations; values below are representative, not exhaustive. M3/M4 hardening is closed locally but not accepted pending UAT/sign-off and Q-003; later entities remain blueprint-only.
+**Status:** Living dictionary. M1/M2 fields, M3 academic/teaching/attendance fields, and M4 examinations/results/report-card/transcript/alumni fields are implemented in migrations; values below are representative, not exhaustive. M3/M4 hardening is closed locally and M3/M4 are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); later entities remain blueprint-only.
 
 ## 1. Conventions
 - **Types:** `uuid`, `string(n)`, `text`, `int`, `decimal(p,s)`, `bool`, `date`, `datetime(tz)`, `jsonb`, `enum`.
@@ -86,7 +86,7 @@
 |  | weight | decimal(5,2) | Y | > 0 and <= 100; scheme weights must total 100 |
 | GradingScale | effective_from/to | date | Y/N | code unique per institution; grade ranges non-overlapping; pass_mark must fall in a range |
 |  | grades | jsonb | Y | min/max/grade/remark entries; service-selected effective scale stored on each result |
-| GradingPolicy | institution_id, campus_id?, grading_scale_id, name, code, effective_from/to, is_active | uuid FK/string/date/bool | Y/N | effective-dated policy; code unique per institution; placeholder/default values pending Q-003 |
+| GradingPolicy | institution_id, campus_id?, grading_scale_id, name, code, effective_from/to, is_active | uuid FK/string/date/bool | Y/N | effective-dated policy; code unique per institution; configurable effective-dated policies accepted as institutional baseline (Q-003/D-032) |
 |  | result_completeness_rules, report_card_settings | jsonb/jsonb | N | configurable completeness and report-card options |
 | ResultRecord | student_id, offering_id, scheme_id, grading_scale_id, session_id, term_id | uuid FK | Y/N | **unique student+offering+scheme**; grading scale preserved at entry time |
 |  | component_scores, total_score, grade, remark | jsonb/decimal/string | Y/N | weighted total computed by controlled service; scores must be within component max marks |
@@ -148,4 +148,4 @@
 - Preserve history: lifecycle events, allocations, attendance corrections, result corrections/versions, transcript issues, asset custody, financial adjustments.
 - Separate public CMS fields/media from confidential ERP records and private documents.
 
-*Expand this dictionary per entity/table as migrations evolve; M3 refinements (workload/recurrence/teacher attendance) and M4 refinements (grading policy, report-card PDF/file refs, alumni linkage) are implemented locally. Formal M3/M4 acceptance awaits UAT/sign-off and Q-003; attempts/ranking/promotion rules remain pending institutional policy.*
+*Expand this dictionary per entity/table as migrations evolve; M3 refinements (workload/recurrence/teacher attendance) and M4 refinements (grading policy, report-card PDF/file refs, alumni linkage) are implemented locally. M3/M4 acceptance is recorded with formal UAT/sign-off and Q-003 confirmation (D-032); attempts/ranking/promotion feature implementation remains blueprint-only.*

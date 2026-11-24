@@ -1,6 +1,6 @@
 # Entity Relationship Diagram
 
-**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance and M4 examinations/results/report-card/transcript/alumni entities are implemented locally with the listed hardening gaps closed. M3/M4 remain not accepted pending UAT/sign-off and Q-003; remaining Phase 4+ entities are blueprint-only.
+**Status:** Living ER model. M1/M2 entities are implemented; M3 academic/teaching/attendance and M4 examinations/results/report-card/transcript/alumni entities are implemented locally with the listed hardening gaps closed. M3/M4 are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); remaining Phase 4+ entities are blueprint-only.
 **Notation:** textual ER model (entities, key attributes, relationships). A visual diagram should be produced during implementation (e.g. dbdiagram/ERD tool) once reviewed.
 
 ## 1. Conventions
@@ -69,12 +69,12 @@
 - **AssessmentScheme** (`id`, institution_id, level/scope, session/term, effective dates, grading config ref) — preserved historically
 - **AssessmentComponent** (`scheme_id`, type [CA/test/exam/etc], name, max_marks, weight, applicable scope)
 - **GradingScale** (`id`, institution_id, name, effective dates, boundaries/grade/description/remarks/gpa rules as configured)
-- **GradingPolicy** (`id`, institution_id, campus_id?, grading_scale_id, effective dates, result_completeness_rules, report_card_settings, is_active) — placeholder/default values pending Q-003
+- **GradingPolicy** (`id`, institution_id, campus_id?, grading_scale_id, effective dates, result_completeness_rules, report_card_settings, is_active) — configurable effective-dated policies accepted as institutional baseline (Q-003/D-032)
 - **ResultRecord** (`id`, student_id, subject_offering_id, session_id, term_id, component scores, total, grade, computed fields metadata, status [draft/submitted/returned/resubmitted/approved/published])
 - **ResultWorkflowAction** (`result_record_id` or batch, action, actor_id, timestamp, comments)
 - **ResultCorrection** (`result_record_id`, original_values, revised_values, reason, requester, reviewer, approver, timestamps, prior_version_ref)
 - **ReportCard** (`id`, institution_id, campus_id?, student_id, session_id, term_id, reference, version, status, template_version, results_snapshot, document_snapshot, private `file`/file_ref, content_type, size_bytes, pdf_sha256, generated_by, published_at)
-- Relationships: ResultRecord unique per student/offering/scheme; ResultWorkflowAction records each transition; ResultCorrection preserves prior scores/total/grade with reason; only published results feed ReportCard and Transcript JSON snapshots; PDF report cards use private storage/hash with authenticated download. Ranking, attempts, and promotion policy remain pending institutional rule confirmation (Q-003).
+- Relationships: ResultRecord unique per student/offering/scheme; ResultWorkflowAction records each transition; ResultCorrection preserves prior scores/total/grade with reason; only published results feed ReportCard and Transcript JSON snapshots; PDF report cards use private storage/hash with authenticated download. Ranking, attempts, and promotion feature implementation remains blueprint-only; Q-003 policy confirmation is accepted (D-032).
 
 ### 2.8 Transcripts & Alumni (M4 implemented locally)
 - **TranscriptRequest** (`id`, institution_id, campus_id?, student_id, requested_by, purpose, requested_kind [provisional/official], status [requested/under_review/approved/rejected/generated/issued], decision_reason, reviewed_by/approved_by, reviewed_at/approved_at)
@@ -130,6 +130,6 @@
 - M2: `admissions`, `guardians`, `students`, `documents`, `imports`, identifier sequences/lifecycle history.
 - M3: `employees/0001_initial.py`, `academics/0001_initial.py`, `teaching/0001_initial.py` + `teaching/0002_m3_workload_recurrence_publish.py`, `attendance/0001_initial.py` + `attendance/0002_m3_teacher_attendance.py`, permission seed `permissions/0004_seed_phase3_permissions.py`, and `permissions/0007_normalize_role_names.py`.
 - M4: `examinations/0001_initial.py` + `examinations/0002_m4_report_card_pdf_and_grading_policy.py`, `transcripts/0001_initial.py`, `alumni/0001_initial.py`, `audit/0002_auditlog_immutability_chain.py`, permission seeds `permissions/0005_seed_phase4_permissions.py`, `permissions/0006_seed_phase4_transcript_permissions.py`, and `permissions/0008_seed_alumni_permissions.py`.
-- Migration state validated locally with `python manage.py makemigrations --check --dry-run` and `pytest -q` (68 passed) against PostgreSQL 18. M3/M4 technical gaps are closed locally but formal acceptance awaits UAT/sign-off and Q-003; promotion/attempt rules remain pending institutional policy.
+- Migration state validated locally with `python manage.py makemigrations --check --dry-run` and `pytest -q` (68 passed) against PostgreSQL 18. M3/M4 technical gaps are closed locally and M3/M4 are accepted with formal UAT/sign-off recorded and Q-003 confirmed (D-032); promotion/attempt feature implementation remains blueprint-only.
 
 *This ER model is a living blueprint refined with migrations; final schema/MRD continues to be validated during implementation.*
