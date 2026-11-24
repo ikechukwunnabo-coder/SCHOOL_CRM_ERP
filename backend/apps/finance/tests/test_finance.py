@@ -558,3 +558,66 @@ def test_flutterwave_webhook_rejects_invalid_signature(api_client):
     assert resp.status_code == 400
     event = PaymentWebhookEvent.objects.get(provider="flutterwave", event_id="flw-bad")
     assert event.processing_detail == "invalid_signature"
+
+
+@pytest.mark.django_db
+def test_reconciliation_import_match_and_exception(
+    accountant, institution, campus, session, student
+):
+    category = FeeCategory.objects.create(
+        institution=institution, campus=campus, code="LAB", name="Lab"
+    )
+    invoice = create_invoice(
+        actor=accountant,
+        institution=institution,
+        campus=campus,
+        student=student,
+        session=session,
+        lines=[
+            {
+                "description": "Lab",
+                "quantity": "1",
+                "unit_amount": "5000.00",
+                "category": category,
+            }
+        ],
+    )
+    issue_invoice(actor=accountant, invoice=invoice)
+    payment = record_payment(
+        actor=accountant,
+        institution=institution,
+        student=student,
+        campus=campus,
+        amount="5000.00",
+        provider="mock",
+        provider_ref="bank-ref-1",
+        allocations=[{"invoice": invoice, "amount": "5000.00"}],
+    )
+
+    from apps.finance.reconciliation import import_reconciliation_row, reconcile_record
+
+    record, _ = import_reconciliation_row(
+        actor=accountant,
+        institution=institution,
+        provider="mock",
+        reference="bank-ref-1",
+        amount="5000.00",
+        currency="NGN",
+        campus=campus,
+    )
+    record = reconcile_record(actor=accountant, record=record)
+    assert record.status == "matched"
+    assert record.payment_id == payment.id
+
+    bad, _ = import_reconciliation_row(
+        actor=accountant,
+        institution=institution,
+        provider="mock",
+        reference="missing-ref",
+        amount="999.00",
+        currency="NGN",
+        campus=campus,
+    )
+    bad = reconcile_record(actor=accountant, record=bad)
+    assert bad.status == "missing"
+    assert bad.exception_reason

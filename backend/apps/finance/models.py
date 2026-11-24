@@ -412,3 +412,50 @@ class PaymentWebhookEvent(TimeStampedModel):
                 name="uq_payment_webhook_provider_event",
             )
         ]
+
+
+class ReconciliationRecord(TimeStampedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        MATCHED = "matched", "Matched"
+        MISMATCHED = "mismatched", "Mismatched"
+        MISSING = "missing", "Missing"
+        RESOLVED = "resolved", "Resolved"
+
+    institution = models.ForeignKey(
+        "institutions.Institution",
+        on_delete=models.PROTECT,
+        related_name="reconciliation_records",
+    )
+    campus = models.ForeignKey(
+        "institutions.Campus",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reconciliation_records",
+    )
+    provider = models.CharField(max_length=30)
+    reference = models.CharField(max_length=120)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3, default="NGN")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    source = models.CharField(max_length=40, default="manual")
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reconciliation_records",
+    )
+    exception_reason = models.TextField(blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["institution", "provider", "reference"],
+                name="uq_reconciliation_institution_provider_reference",
+            )
+        ]

@@ -162,4 +162,19 @@ MODULE_GRANTS = {
             "Parent/Guardian",
         ),
     },
+    "notifications": {
+        "view": ADMIN_ROLES + (REGISTRAR, PRINCIPAL, VICE_PRINCIPAL, "Bursar/Accountant"),
+        "create": ADMIN_ROLES + (REGISTRAR, "Bursar/Accountant"),
+        "update": ADMIN_ROLES + (REGISTRAR, "Bursar/Accountant"),
+        "delete_or_archive": ADMIN_ROLES,
+        "export": ADMIN_ROLES + (REGISTRAR, PRINCIPAL),
+    },
+    "accounting": {
+        "view": ADMIN_ROLES + ("Bursar/Accountant", PRINCIPAL, VICE_PRINCIPAL),
+        "create": ADMIN_ROLES + ("Bursar/Accountant",),
+        "update": ADMIN_ROLES + ("Bursar/Accountant",),
+        "delete_or_archive": ADMIN_ROLES,
+        "approve": ADMIN_ROLES + (PRINCIPAL,),
+        "export": ADMIN_ROLES + ("Bursar/Accountant", PRINCIPAL),
+    },
 }

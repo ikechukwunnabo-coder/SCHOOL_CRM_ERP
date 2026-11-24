@@ -24,7 +24,9 @@ from .models import (
     Invoice,
     Payment,
     PaymentWebhookEvent,
+    ReconciliationRecord,
 )
+from .reconciliation import import_reconciliation_row, reconcile_record
 from .services import FinanceError
 
 BASE = [
@@ -98,6 +100,8 @@ class ScopedFinanceViewSet(viewsets.ModelViewSet):
             linked_student_ids = self._guardian_linked_student_ids()
             if hasattr(self.queryset.model, "student_id"):
                 qs = qs.filter(student_id__in=linked_student_ids)
+            elif self.queryset.model is ReconciliationRecord:
+                qs = qs.filter(payment__student_id__in=linked_student_ids)
             else:
                 qs = qs.none()
         return qs
@@ -363,6 +367,68 @@ class FinancialAdjustmentViewSet(ScopedFinanceViewSet):
         adjustment = self.get_object()
         updated = services.apply_adjustment(actor=request.user, adjustment=adjustment)
         return Response(self.get_serializer(updated).data)
+
+
+class ReconciliationRecordViewSet(ScopedFinanceViewSet):
+    queryset = ReconciliationRecord.objects.select_related("institution", "campus", "payment")
+    serializer_class = serializer_for(ReconciliationRecord, read_only=("reconciled_at",))
+    verb_map = {
+        **ScopedFinanceViewSet.verb_map,
+        "import_record": "create",
+        "reconcile": "update",
+        "summary": "view",
+    }
+
+    @action(detail=False, methods=["post"], url_path="import")
+    def import_record(self, request, *args, **kwargs):
+        user = request.user
+        institution = request.data.get("institution") or getattr(user, "institution_id", None)
+        if not user.is_superuser:
+            institution = user.institution_id
+        from apps.institutions.models import Institution
+
+        inst = Institution.objects.get(pk=institution)
+        record, created = import_reconciliation_row(
+            actor=user,
+            institution=inst,
+            provider=request.data.get("provider", "mock"),
+            reference=request.data.get("reference", ""),
+            amount=request.data.get("amount", "0.00"),
+            currency=request.data.get("currency", "NGN"),
+            status=request.data.get("status", ReconciliationRecord.Status.PENDING),
+            source=request.data.get("source", "manual"),
+            payload=request.data.get("payload") or {},
+            campus=user.campus if not user.is_superuser else None,
+        )
+        return Response(
+            self.get_serializer(record).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"])
+    def reconcile(self, request, *args, **kwargs):
+        record = reconcile_record(actor=request.user, record=self.get_object())
+        return Response(self.get_serializer(record).data)
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        by_status = {
+            status_value: qs.filter(status=status_value).count()
+            for status_value, _ in ReconciliationRecord.Status.choices
+        }
+        return Response(
+            {
+                "count": qs.count(),
+                "by_status": by_status,
+                "unresolved_count": qs.exclude(
+                    status__in=[
+                        ReconciliationRecord.Status.MATCHED,
+                        ReconciliationRecord.Status.RESOLVED,
+                    ]
+                ).count(),
+            }
+        )
 
 
 class PaymentWebhookViewSet(viewsets.ViewSet):

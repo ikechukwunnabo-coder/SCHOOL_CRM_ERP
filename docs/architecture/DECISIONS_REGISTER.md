@@ -837,3 +837,10 @@ Selection of payment, SMS, email or storage providers does not block provider-in
 A documented decision is not automatically an implemented system. An implemented feature is not a tested feature. A tested feature is not accepted for production until the appropriate owner has reviewed and approved it; for M3/M4 that approval is recorded in D-032.
 
 **Authoritative project reference:** `MASTER_CRM_ERP_SCHOOL_PROMPT.md`.
+
+## D-035 — M5 development-complete vs production acceptance
+
+**Decision:** For Phase 5/M5 gap closure, requirements may be marked **Development-complete** when implementation, functional/integration tests, scoped RBAC/security checks, and local/staging-runnable configuration exist in-repo. **Production acceptance** remains separate and requires production-readiness evidence (approved credentials/secrets, live settlement/reconciliation, orchestration/monitoring/backups/runbooks, UAT) and formal stakeholder sign-off.
+
+**Owner:** Product / Engineering / Finance / School Management
+**Approval:** Recorded locally on 2026-11-24 by user instruction. This does not accept M5 for production.
