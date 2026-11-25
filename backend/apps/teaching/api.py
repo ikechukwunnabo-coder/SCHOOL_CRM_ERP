@@ -137,7 +137,12 @@ class TeacherPortalViewSet(viewsets.ViewSet):
     verb = "view"
 
     def list(self, request):
-        from apps.permissions.roles import TEACHING_ROLES, HOD, PRINCIPAL, VICE_PRINCIPAL
+        from apps.permissions.roles import (
+            HOD,
+            PRINCIPAL,
+            TEACHING_ROLES,
+            VICE_PRINCIPAL,
+        )
 
         allowed = set(TEACHING_ROLES) | {HOD, PRINCIPAL, VICE_PRINCIPAL}
         if not request.user.is_superuser and not (set(get_user_role_names(request.user)) & allowed):
