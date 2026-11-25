@@ -1,3 +1,4 @@
+from django.db.models import Count
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -174,6 +175,43 @@ class JournalEntryViewSet(ScopedAccountingViewSet):
     queryset = JournalEntry.objects.select_related(
         "institution", "campus", "posted_by"
     ).prefetch_related("lines")
+
+
+class AccountingDashboardViewSet(viewsets.ViewSet):
+    permission_classes = BASE
+    module = "accounting"
+    verb = "view"
+
+    def list(self, request):
+        user = request.user
+        accounts = LedgerAccount.objects.all()
+        entries = JournalEntry.objects.all()
+        if not user.is_superuser:
+            accounts = accounts.filter(institution_id=user.institution_id)
+            entries = entries.filter(institution_id=user.institution_id)
+            if user.campus_id:
+                entries = entries.filter(campus_id=user.campus_id)
+        posted = entries.filter(status=JournalEntry.Status.POSTED)
+        return Response(
+            {
+                "accounts": {
+                    "count": accounts.count(),
+                    "by_type": {
+                        row["account_type"]: row["c"]
+                        for row in accounts.values("account_type").annotate(c=Count("id"))
+                    },
+                },
+                "journal_entries": {
+                    "count": entries.count(),
+                    "posted_count": posted.count(),
+                    "draft_count": entries.filter(status=JournalEntry.Status.DRAFT).count(),
+                    "by_status": {
+                        row["status"]: row["c"]
+                        for row in entries.values("status").annotate(c=Count("id"))
+                    },
+                },
+            }
+        )
 
     def get_serializer_class(self):
         if self.action == "create":

@@ -1,3 +1,4 @@
+from django.db.models import Count
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -102,3 +103,30 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         except NotificationError as exc:
             raise ConflictError(detail=str(exc)) from exc
         return Response(self.get_serializer(notification).data, status=status.HTTP_200_OK)
+
+
+class NotificationDashboardViewSet(viewsets.ViewSet):
+    permission_classes = BASE
+    module = "notifications"
+    verb = "view"
+
+    def list(self, request):
+        user = request.user
+        qs = Notification.objects.all()
+        if not user.is_superuser:
+            qs = qs.filter(institution_id=user.institution_id)
+            if getattr(user, "campus_id", None):
+                qs = qs.filter(campus_id=user.campus_id) | qs.filter(campus__isnull=True)
+        return Response(
+            {
+                "count": qs.count(),
+                "unread_count": qs.exclude(status=Notification.Status.READ).count(),
+                "by_status": {
+                    row["status"]: row["c"] for row in qs.values("status").annotate(c=Count("id"))
+                },
+                "by_channel": {
+                    row["channel"]: row["c"]
+                    for row in qs.values("channel").annotate(c=Count("id"))
+                },
+            }
+        )

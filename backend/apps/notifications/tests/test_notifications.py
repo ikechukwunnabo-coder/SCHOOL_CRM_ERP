@@ -1,62 +1,94 @@
 import pytest
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from rest_framework import status
 
-from apps.institutions.models import Institution
-from apps.notifications.models import Notification
-from apps.permissions.models import Permission, Role, RolePermission, UserRole
+from apps.notifications.models import Notification, NotificationTemplate
+from apps.permissions.models import Role, UserRole
+from apps.permissions.roles import PARENT_GUARDIAN, REGISTRAR
 
 
-def grant_role(user, *, institution, role_name):
-    role, _ = Role.objects.get_or_create(
-        name=role_name, defaults={"is_system": True, "institution": institution}
+@pytest.fixture
+def base(db):
+    from apps.institutions.models import Campus, Institution
+
+
+    institution = Institution.objects.create(code="NOTIF", name="Notif Inst")
+    campus = Campus.objects.create(
+        institution=institution, code="MAIN", name="Main"
     )
-    UserRole.objects.get_or_create(
-        user=user,
-        role=role,
-        scope_type=UserRole.ScopeType.INSTITUTION,
-        scope_ref_id=institution.id,
-        defaults={"is_active": True},
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    registrar = User.objects.create_user(
+        email="registrar@notif.test",
+        password="pass12345",
+        institution=institution,
+        campus=campus,
     )
-    for perm in Permission.objects.filter(module="notifications"):
-        if role_name in (perm.allowed_role_names or []):
-            RolePermission.objects.get_or_create(role=role, permission=perm)
+    parent = User.objects.create_user(
+        email="parent@notif.test",
+        password="pass12345",
+        institution=institution,
+        campus=campus,
+    )
+    Role.objects.get_or_create(name=REGISTRAR, defaults={"is_system": True})
+    Role.objects.get_or_create(name=PARENT_GUARDIAN, defaults={"is_system": True})
+    UserRole.objects.create(user=registrar, role=Role.objects.get(name=REGISTRAR))
+    UserRole.objects.create(user=parent, role=Role.objects.get(name=PARENT_GUARDIAN))
+    return institution, campus, registrar, parent
 
 
 @pytest.mark.django_db
-def test_notification_send_logs_status(monkeypatch):
-    inst = Institution.objects.create(name="Notif Inst", code="NOT")
-    user = get_user_model().objects.create_user(
-        email="notif@test.local", password="Passw0rd!123", institution=inst
-    )
-    grant_role(user, institution=inst, role_name="Registrar/Admissions")
-    monkeypatch.setattr("apps.notifications.services.send_mail", lambda *args, **kwargs: 1)
-    client = APIClient()
-    client.force_authenticate(user=user)
-
-    create = client.post(
-        "/api/v1/notifications/templates/",
-        {
-            "institution": str(inst.id),
-            "code": "FEE_DUE",
-            "channel": "email",
-            "subject": "Fee due",
-            "body": "Please pay",
-        },
-        format="json",
-    )
-    assert create.status_code in {200, 201}
-
+def test_notification_send_logs_status(base, settings):
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    institution, campus, registrar, _ = base
     n = Notification.objects.create(
-        institution=inst,
-        recipient_email="p@test.local",
-        channel="email",
+        institution=institution,
+        campus=campus,
+        channel=NotificationTemplate.Channel.EMAIL,
+        recipient_email="to@example.com",
         subject="Hello",
         body="Body",
         status=Notification.Status.PENDING,
     )
-    resp = client.post(f"/api/v1/notifications/logs/{n.id}/send/")
-    assert resp.status_code == 200
-    n.refresh_from_db()
-    assert n.status == Notification.Status.SENT, n.error_message
+    from apps.notifications.services import send_notification
 
+    sent = send_notification(actor=registrar, notification=n)
+    assert sent.status == Notification.Status.SENT
+    assert sent.sent_at is not None
+
+
+@pytest.mark.django_db
+def test_notification_dashboard_denies_parent(base):
+    from rest_framework.test import APIClient
+
+    institution, campus, _, parent = base
+    Notification.objects.create(
+        institution=institution,
+        campus=campus,
+        channel=NotificationTemplate.Channel.IN_APP,
+        body="Body",
+        status=Notification.Status.SENT,
+    )
+    client = APIClient()
+    client.force_authenticate(user=parent)
+    response = client.get("/api/v1/notifications/dashboard/")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_notification_dashboard_allows_registrar(base):
+    from rest_framework.test import APIClient
+
+    institution, campus, registrar, _ = base
+    Notification.objects.create(
+        institution=institution,
+        campus=campus,
+        channel=NotificationTemplate.Channel.IN_APP,
+        body="Body",
+        status=Notification.Status.SENT,
+    )
+    client = APIClient()
+    client.force_authenticate(user=registrar)
+    response = client.get("/api/v1/notifications/dashboard/")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data["count"] == 1

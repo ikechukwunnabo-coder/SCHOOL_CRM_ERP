@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
@@ -14,7 +17,11 @@ from apps.permissions.permissions import (
     IsCampusScoped,
     IsInstitutionScoped,
 )
-from apps.permissions.services import user_can_access_campus_id, user_can_access_institution
+from apps.permissions.services import (
+    get_user_role_names,
+    user_can_access_campus_id,
+    user_can_access_institution,
+)
 
 from . import services
 from .models import TeacherAssignment, TeacherWorkloadPolicy, Timetable, TimetableSlot
@@ -122,6 +129,61 @@ class WorkloadPolicyViewSet(ScopedViewSet):
     serializer_class = serializer_for(TeacherWorkloadPolicy)
     queryset = TeacherWorkloadPolicy.objects.all()
     filterset_fields = ["institution", "campus", "effective_from"]
+
+
+class TeacherPortalViewSet(viewsets.ViewSet):
+    permission_classes = BASE
+    module = "teaching"
+    verb = "view"
+
+    def list(self, request):
+        from apps.permissions.roles import TEACHING_ROLES, HOD, PRINCIPAL, VICE_PRINCIPAL
+
+        allowed = set(TEACHING_ROLES) | {HOD, PRINCIPAL, VICE_PRINCIPAL}
+        if not request.user.is_superuser and not (set(get_user_role_names(request.user)) & allowed):
+            raise PermissionDenied("You do not have permission for teaching.view.")
+        today = timezone.localdate()
+        assignments = services.resolve_teacher_scope(request.user)
+        from apps.attendance.models import AttendanceSession, TeacherAttendanceRecord
+
+        employee_ids = {a.employee_id for a in assignments}
+        offering_ids = {a.offering_id for a in assignments}
+        timetable_ids = list(
+            Timetable.objects.filter(
+                session__institution_id=request.user.institution_id, status="published"
+            ).values_list("id", flat=True)
+        )
+        slots = TimetableSlot.objects.filter(
+            timetable_id__in=timetable_ids, offering_id__in=offering_ids
+        ).select_related("offering", "employee", "timetable")[:100]
+        attendance_sessions = AttendanceSession.objects.filter(
+            offering_id__in=offering_ids, attendance_date__gte=today - timedelta(days=14)
+        ).order_by("-attendance_date")[:50]
+        teacher_attendance = TeacherAttendanceRecord.objects.filter(
+            employee_id__in=employee_ids
+        ).order_by("-attendance_date")[:30]
+        return Response(
+            {
+                "teacher": {
+                    "employee_ids": list(employee_ids),
+                    "assignment_count": len(assignments),
+                },
+                "assignments": serializer_for(TeacherAssignment)(assignments, many=True).data,
+                "timetable_slots": serializer_for(TimetableSlot)(slots, many=True).data,
+                "attendance_sessions": [
+                    {
+                        "id": s.id,
+                        "offering_id": s.offering_id,
+                        "attendance_date": s.attendance_date,
+                        "status": s.status,
+                    }
+                    for s in attendance_sessions
+                ],
+                "teacher_attendance": serializer_for(TeacherAttendanceRecord)(
+                    teacher_attendance, many=True
+                ).data,
+            }
+        )
 
 
 class AssignmentViewSet(ScopedViewSet):
