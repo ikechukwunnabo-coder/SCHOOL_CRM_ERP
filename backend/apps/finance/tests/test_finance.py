@@ -683,3 +683,42 @@ def test_reconciliation_exception_can_be_resolved(accountant, institution, campu
     record = resolve_reconciliation(actor=accountant, record=record, reason="manual_adjustment")
     assert record.status == "resolved"
     assert record.exception_reason == "manual_adjustment"
+
+
+@pytest.mark.django_db
+def test_reconciliation_resolve_requires_update_permission(
+    api_client, institution, campus
+):
+    from apps.finance.reconciliation import import_reconciliation_row, reconcile_record
+
+    viewer = get_user_model().objects.create_user(
+        email="viewer@fin.test", password="Passw0rd!123", institution=institution, campus=campus
+    )
+    grant_role(viewer, institution=institution, campus=campus, role_name="Registrar/Admissions")
+    accountant = get_user_model().objects.create_user(
+        email="acct2@fin.test", password="Passw0rd!123", institution=institution, campus=campus
+    )
+    grant_role(accountant, institution=institution, campus=campus, role_name="Bursar/Accountant")
+    record, _ = import_reconciliation_row(
+        actor=accountant,
+        institution=institution,
+        provider="mock",
+        reference="no-resolve",
+        amount="10.00",
+        currency="NGN",
+        campus=campus,
+    )
+    reconcile_record(actor=accountant, record=record)
+    api_client.force_authenticate(viewer)
+    resp = api_client.post(
+        f"/api/v1/finance/reconciliation-records/{record.id}/resolve/",
+        {"reason": "x"},
+        format="json",
+    )
+    assert resp.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_finance_dashboard_denies_unauthenticated(api_client):
+    resp = api_client.get("/api/v1/finance/dashboard/")
+    assert resp.status_code in {401, 403}
