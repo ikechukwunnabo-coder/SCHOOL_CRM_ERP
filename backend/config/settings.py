@@ -289,6 +289,10 @@ if PAYMENT_FLUTTERWAVE_WEBHOOK_SECRET_HASH:
         "flutterwave", PAYMENT_FLUTTERWAVE_WEBHOOK_SECRET_HASH
     )
 
+FINANCE_POSTING_ENABLED = env.bool("FINANCE_POSTING_ENABLED", default=False)
+FINANCE_CASH_ACCOUNT_CODE = env("FINANCE_CASH_ACCOUNT_CODE", default="1000")
+FINANCE_INCOME_ACCOUNT_CODE = env("FINANCE_INCOME_ACCOUNT_CODE", default="4000")
+
 # Email
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@example.com")

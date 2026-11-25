@@ -1,3 +1,4 @@
+from django.db.models import Count, Sum
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -310,6 +311,71 @@ class PaymentViewSet(ScopedFinanceViewSet):
             allocations=allocations,
         )
         return Response(self.get_serializer(payment).data, status=201)
+
+
+class FinanceDashboardViewSet(viewsets.ViewSet):
+    permission_classes = BASE
+    module = "finance"
+    verb = "view"
+
+    def list(self, request):
+        user = request.user
+        invoice_qs = Invoice.objects.all()
+        payment_qs = Payment.objects.all()
+        recon_qs = ReconciliationRecord.objects.all()
+        if not user.is_superuser:
+            invoice_qs = invoice_qs.filter(institution_id=user.institution_id)
+            payment_qs = payment_qs.filter(institution_id=user.institution_id)
+            recon_qs = recon_qs.filter(institution_id=user.institution_id)
+            if user.campus_id:
+                invoice_qs = invoice_qs.filter(campus_id=user.campus_id)
+                payment_qs = payment_qs.filter(campus_id=user.campus_id)
+                recon_qs = recon_qs.filter(campus_id=user.campus_id)
+        if (not user.is_superuser) and "Parent/Guardian" in get_user_role_names(user):
+            linked = StudentGuardian.objects.filter(
+                guardian__user=user,
+                guardian__institution_id=user.institution_id,
+                portal_access=True,
+                student__institution_id=user.institution_id,
+            ).values_list("student_id", flat=True)
+            invoice_qs = invoice_qs.filter(student_id__in=linked)
+            payment_qs = payment_qs.filter(student_id__in=linked)
+            recon_qs = recon_qs.filter(payment__student_id__in=linked)
+
+        return Response(
+            {
+                "invoices": {
+                    "count": invoice_qs.count(),
+                    "total": str(invoice_qs.aggregate(v=Sum("total_amount"))["v"] or 0),
+                    "balance": str(invoice_qs.aggregate(v=Sum("balance_amount"))["v"] or 0),
+                    "by_status": {
+                        row["status"]: row["c"]
+                        for row in invoice_qs.values("status").annotate(c=Count("id"))
+                    },
+                },
+                "payments": {
+                    "count": payment_qs.count(),
+                    "total": str(payment_qs.aggregate(v=Sum("amount"))["v"] or 0),
+                    "by_status": {
+                        row["status"]: row["c"]
+                        for row in payment_qs.values("status").annotate(c=Count("id"))
+                    },
+                },
+                "reconciliation": {
+                    "count": recon_qs.count(),
+                    "unresolved_count": recon_qs.exclude(
+                        status__in=[
+                            ReconciliationRecord.Status.MATCHED,
+                            ReconciliationRecord.Status.RESOLVED,
+                        ]
+                    ).count(),
+                    "by_status": {
+                        row["status"]: row["c"]
+                        for row in recon_qs.values("status").annotate(c=Count("id"))
+                    },
+                },
+            }
+        )
 
 
 class FinancialAdjustmentViewSet(ScopedFinanceViewSet):

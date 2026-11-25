@@ -621,3 +621,41 @@ def test_reconciliation_import_match_and_exception(
     bad = reconcile_record(actor=accountant, record=bad)
     assert bad.status == "missing"
     assert bad.exception_reason
+
+
+@pytest.mark.django_db
+def test_finance_dashboard_returns_query_backed_summary(
+    api_client, accountant, institution, campus, session, student
+):
+    category = FeeCategory.objects.create(
+        institution=institution, campus=campus, code="DASH", name="Dash"
+    )
+    invoice = create_invoice(
+        actor=accountant,
+        institution=institution,
+        campus=campus,
+        student=student,
+        session=session,
+        lines=[
+            {
+                "description": "Dash",
+                "quantity": "1",
+                "unit_amount": "2000.00",
+                "category": category,
+            }
+        ],
+    )
+    issue_invoice(actor=accountant, invoice=invoice)
+    record_payment(
+        actor=accountant,
+        institution=institution,
+        student=student,
+        campus=campus,
+        amount="2000.00",
+        allocations=[{"invoice": invoice, "amount": "2000.00"}],
+    )
+    api_client.force_authenticate(accountant)
+    resp = api_client.get("/api/v1/finance/dashboard/")
+    assert resp.status_code == 200
+    assert resp.data["invoices"]["count"] >= 1
+    assert resp.data["payments"]["count"] >= 1

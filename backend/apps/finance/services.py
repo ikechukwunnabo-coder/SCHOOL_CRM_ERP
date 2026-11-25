@@ -9,6 +9,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from apps.accounting.models import LedgerAccount
+from apps.accounting.services import post_journal_entry
 from apps.audit.services import log_event
 from apps.core.identifiers import generate_identifier
 
@@ -41,6 +43,38 @@ def ensure_institution_scope(actor, obj) -> None:
     actor_campus_id = getattr(actor, "campus_id", None)
     if campus_id is not None and actor_campus_id not in (None, campus_id):
         raise FinanceError("campus_scope_violation")
+
+
+def _maybe_post_payment_to_gl(*, actor, payment: Payment) -> None:
+    if not getattr(settings, "FINANCE_POSTING_ENABLED", False):
+        return
+    if payment.status != Payment.Status.VERIFIED:
+        return
+    cash_code = getattr(settings, "FINANCE_CASH_ACCOUNT_CODE", "1000")
+    income_code = getattr(settings, "FINANCE_INCOME_ACCOUNT_CODE", "4000")
+    cash = LedgerAccount.objects.filter(
+        institution_id=payment.institution_id, code=cash_code, is_active=True
+    ).first()
+    income = LedgerAccount.objects.filter(
+        institution_id=payment.institution_id, code=income_code, is_active=True
+    ).first()
+    if cash is None or income is None:
+        return
+    post_journal_entry(
+        actor=actor,
+        institution=payment.institution,
+        campus=payment.campus,
+        entry_date=timezone.localdate(payment.verified_at or payment.received_at),
+        reference=payment.receipt_number or payment.provider_ref or str(payment.id),
+        description=f"Payment {payment.receipt_number or payment.id}",
+        source_type="finance.Payment",
+        source_id=str(payment.id),
+        idempotency_key=f"finance-payment-{payment.id}",
+        lines=[
+            {"account": cash, "debit": payment.amount, "credit": "0.00", "memo": "Cash"},
+            {"account": income, "debit": "0.00", "credit": payment.amount, "memo": "Income"},
+        ],
+    )
 
 
 def _recalculate_invoice(invoice: Invoice) -> Invoice:
@@ -249,6 +283,7 @@ def record_payment(
             "idempotency_key": payment.idempotency_key,
         },
     )
+    _maybe_post_payment_to_gl(actor=actor, payment=payment)
     return payment
 
 
@@ -588,6 +623,7 @@ def process_payment_webhook(
     payment.save(update_fields=["status", "verified_at", "provider_ref", "updated_at"])
     for alloc in payment.allocations.select_for_update().select_related("invoice"):
         _recalculate_invoice(alloc.invoice)
+    _maybe_post_payment_to_gl(actor=None, payment=payment)
 
     event.status = PaymentWebhookEvent.Status.PROCESSED
     event.payment = payment

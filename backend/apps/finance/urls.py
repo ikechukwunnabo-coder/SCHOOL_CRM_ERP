@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .api import (
     FeeCategoryViewSet,
     FeeScheduleViewSet,
+    FinanceDashboardViewSet,
     FinancialAdjustmentViewSet,
     InvoiceViewSet,
     PaymentViewSet,
@@ -21,6 +22,7 @@ router.register("adjustments", FinancialAdjustmentViewSet, basename="financial-a
 router.register(
     "reconciliation-records", ReconciliationRecordViewSet, basename="reconciliation-record"
 )
+router.register("dashboard", FinanceDashboardViewSet, basename="finance-dashboard")
 router.register("webhooks/payments", PaymentWebhookViewSet, basename="payment-webhook")
 
 urlpatterns = router.urls
