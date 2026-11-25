@@ -92,3 +92,40 @@ def test_notification_dashboard_allows_registrar(base):
     response = client.get("/api/v1/notifications/dashboard/")
     assert response.status_code == status.HTTP_200_OK
     assert response.data["count"] == 1
+@pytest.mark.django_db
+def test_notification_template_create_denies_parent(base):
+    from rest_framework.test import APIClient
+
+    institution, _, _, parent = base
+    client = APIClient()
+    client.force_authenticate(user=parent)
+    response = client.post(
+        "/api/v1/notifications/templates/",
+        {
+            "institution": str(institution.id),
+            "code": "WELCOME",
+            "name": "Welcome",
+            "channel": NotificationTemplate.Channel.IN_APP,
+            "body": "Hi",
+        },
+        format="json",
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_notification_send_action_denies_parent(base):
+    from rest_framework.test import APIClient
+
+    institution, campus, _, parent = base
+    n = Notification.objects.create(
+        institution=institution,
+        campus=campus,
+        channel=NotificationTemplate.Channel.IN_APP,
+        body="Body",
+        status=Notification.Status.PENDING,
+    )
+    client = APIClient()
+    client.force_authenticate(user=parent)
+    response = client.post(f"/api/v1/notifications/logs/{n.id}/send/")
+    assert response.status_code == status.HTTP_403_FORBIDDEN

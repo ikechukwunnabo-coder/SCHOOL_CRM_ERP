@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Sum
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -175,43 +175,11 @@ class JournalEntryViewSet(ScopedAccountingViewSet):
     queryset = JournalEntry.objects.select_related(
         "institution", "campus", "posted_by"
     ).prefetch_related("lines")
-
-
-class AccountingDashboardViewSet(viewsets.ViewSet):
-    permission_classes = BASE
-    module = "accounting"
-    verb = "view"
-
-    def list(self, request):
-        user = request.user
-        accounts = LedgerAccount.objects.all()
-        entries = JournalEntry.objects.all()
-        if not user.is_superuser:
-            accounts = accounts.filter(institution_id=user.institution_id)
-            entries = entries.filter(institution_id=user.institution_id)
-            if user.campus_id:
-                entries = entries.filter(campus_id=user.campus_id)
-        posted = entries.filter(status=JournalEntry.Status.POSTED)
-        return Response(
-            {
-                "accounts": {
-                    "count": accounts.count(),
-                    "by_type": {
-                        row["account_type"]: row["c"]
-                        for row in accounts.values("account_type").annotate(c=Count("id"))
-                    },
-                },
-                "journal_entries": {
-                    "count": entries.count(),
-                    "posted_count": posted.count(),
-                    "draft_count": entries.filter(status=JournalEntry.Status.DRAFT).count(),
-                    "by_status": {
-                        row["status"]: row["c"]
-                        for row in entries.values("status").annotate(c=Count("id"))
-                    },
-                },
-            }
-        )
+    verb_map = {
+        **ScopedAccountingViewSet.verb_map,
+        "post": "update",
+        "approve": "approve",
+    }
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -256,3 +224,45 @@ class AccountingDashboardViewSet(viewsets.ViewSet):
         except AccountingError as exc:
             raise ConflictError(detail=str(exc)) from exc
         return Response(JournalEntrySerializer(posted, context={"request": request}).data)
+
+
+class AccountingDashboardViewSet(viewsets.ViewSet):
+    permission_classes = BASE
+    module = "accounting"
+    verb = "view"
+
+    def list(self, request):
+        user = request.user
+        accounts = LedgerAccount.objects.all()
+        entries = JournalEntry.objects.all()
+        if not user.is_superuser:
+            accounts = accounts.filter(institution_id=user.institution_id)
+            entries = entries.filter(institution_id=user.institution_id)
+            if user.campus_id:
+                entries = entries.filter(campus_id=user.campus_id)
+        posted = entries.filter(status=JournalEntry.Status.POSTED)
+        posted_lines = JournalLine.objects.filter(entry__in=posted)
+        return Response(
+            {
+                "accounts": {
+                    "count": accounts.count(),
+                    "by_type": {
+                        row["account_type"]: row["c"]
+                        for row in accounts.values("account_type").annotate(c=Count("id"))
+                    },
+                },
+                "journal_entries": {
+                    "count": entries.count(),
+                    "posted_count": posted.count(),
+                    "draft_count": entries.filter(status=JournalEntry.Status.DRAFT).count(),
+                    "by_status": {
+                        row["status"]: row["c"]
+                        for row in entries.values("status").annotate(c=Count("id"))
+                    },
+                    "posted_totals": {
+                        "debit": str(posted_lines.aggregate(total=Sum("debit"))["total"] or 0),
+                        "credit": str(posted_lines.aggregate(total=Sum("credit"))["total"] or 0),
+                    },
+                },
+            }
+        )

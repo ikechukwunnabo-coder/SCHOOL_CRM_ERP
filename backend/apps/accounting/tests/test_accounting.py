@@ -131,3 +131,33 @@ def test_accounting_dashboard_allows_bursar(accounting_base):
     response = client.get("/api/v1/accounting/dashboard/")
     assert response.status_code == status.HTTP_200_OK
     assert response.data["accounts"]["count"] == 2
+@pytest.mark.django_db
+def test_journal_approve_requires_approve_permission(accounting_base):
+    from rest_framework.test import APIClient
+
+    institution, campus, bursar, _, cash, income = accounting_base
+    entry, _ = create_journal_entry(
+        actor=bursar,
+        institution=institution,
+        campus=campus,
+        entry_date=timezone.localdate(),
+        reference="REF-3",
+        description="Needs approval",
+        lines=[
+            {"account": cash, "debit": Decimal("50.00"), "credit": Decimal("0")},
+            {"account": income, "debit": Decimal("0"), "credit": Decimal("50.00")},
+        ],
+    )
+    client = APIClient()
+    client.force_authenticate(user=bursar)
+    response = client.post(f"/api/v1/accounting/journal-entries/{entry.id}/approve/")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_accounting_dashboard_denies_unauthenticated():
+    from rest_framework.test import APIClient
+
+    client = APIClient()
+    response = client.get("/api/v1/accounting/dashboard/")
+    assert response.status_code in {status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN}
