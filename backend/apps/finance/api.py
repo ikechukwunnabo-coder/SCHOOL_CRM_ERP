@@ -27,7 +27,7 @@ from .models import (
     PaymentWebhookEvent,
     ReconciliationRecord,
 )
-from .reconciliation import import_reconciliation_row, reconcile_record
+from .reconciliation import import_reconciliation_row, reconcile_record, resolve_reconciliation
 from .services import FinanceError
 
 BASE = [
@@ -442,6 +442,7 @@ class ReconciliationRecordViewSet(ScopedFinanceViewSet):
         **ScopedFinanceViewSet.verb_map,
         "import_record": "create",
         "reconcile": "update",
+        "resolve": "update",
         "summary": "view",
     }
 
@@ -474,6 +475,15 @@ class ReconciliationRecordViewSet(ScopedFinanceViewSet):
     @action(detail=True, methods=["post"])
     def reconcile(self, request, *args, **kwargs):
         record = reconcile_record(actor=request.user, record=self.get_object())
+        return Response(self.get_serializer(record).data)
+
+    @action(detail=True, methods=["post"])
+    def resolve(self, request, *args, **kwargs):
+        record = resolve_reconciliation(
+            actor=request.user,
+            record=self.get_object(),
+            reason=str(request.data.get("reason", "")),
+        )
         return Response(self.get_serializer(record).data)
 
     @action(detail=False, methods=["get"])

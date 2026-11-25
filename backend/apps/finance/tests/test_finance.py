@@ -659,3 +659,27 @@ def test_finance_dashboard_returns_query_backed_summary(
     assert resp.status_code == 200
     assert resp.data["invoices"]["count"] >= 1
     assert resp.data["payments"]["count"] >= 1
+
+
+@pytest.mark.django_db
+def test_reconciliation_exception_can_be_resolved(accountant, institution, campus):
+    from apps.finance.reconciliation import (
+        import_reconciliation_row,
+        reconcile_record,
+        resolve_reconciliation,
+    )
+
+    record, _ = import_reconciliation_row(
+        actor=accountant,
+        institution=institution,
+        provider="mock",
+        reference="resolve-me",
+        amount="100.00",
+        currency="NGN",
+        campus=campus,
+    )
+    record = reconcile_record(actor=accountant, record=record)
+    assert record.status == "missing"
+    record = resolve_reconciliation(actor=accountant, record=record, reason="manual_adjustment")
+    assert record.status == "resolved"
+    assert record.exception_reason == "manual_adjustment"

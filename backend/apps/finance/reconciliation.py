@@ -154,3 +154,25 @@ def reconcile_record(*, actor, record: ReconciliationRecord):
         metadata={"payment_id": str(payment.id), "provider": record.provider},
     )
     return record
+
+
+@transaction.atomic
+def resolve_reconciliation(*, actor, record: ReconciliationRecord, reason=""):
+    ensure_institution_scope(actor, record)
+    record = ReconciliationRecord.objects.select_for_update().get(pk=record.pk)
+    if record.status == ReconciliationRecord.Status.MATCHED:
+        raise FinanceError("matched_record_not_resolvable")
+    record.status = ReconciliationRecord.Status.RESOLVED
+    record.exception_reason = reason or record.exception_reason
+    record.reconciled_at = timezone.now()
+    record.save(update_fields=["status", "exception_reason", "reconciled_at", "updated_at"])
+    log_event(
+        "finance.reconciliation_resolved",
+        actor=actor,
+        target_type="finance.ReconciliationRecord",
+        target_id=record.pk,
+        institution_id=record.institution_id,
+        campus_id=record.campus_id,
+        metadata={"reason": record.exception_reason},
+    )
+    return record
