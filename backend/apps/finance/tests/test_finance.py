@@ -731,7 +731,10 @@ def test_reconciliation_summary_denies_unauthenticated(api_client):
 @pytest.mark.django_db
 def test_reconciliation_import_requires_create_permission(api_client, institution, campus):
     viewer = get_user_model().objects.create_user(
-        email="viewer-import@fin.test", password="Passw0rd!123", institution=institution, campus=campus
+        email="viewer-import@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
     )
     grant_role(viewer, institution=institution, campus=campus, role_name="Registrar/Admissions")
     api_client.force_authenticate(viewer)
