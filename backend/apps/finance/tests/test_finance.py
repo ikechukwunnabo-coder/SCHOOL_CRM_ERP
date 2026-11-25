@@ -722,3 +722,22 @@ def test_reconciliation_resolve_requires_update_permission(
 def test_finance_dashboard_denies_unauthenticated(api_client):
     resp = api_client.get("/api/v1/finance/dashboard/")
     assert resp.status_code in {401, 403}
+@pytest.mark.django_db
+def test_reconciliation_summary_denies_unauthenticated(api_client):
+    resp = api_client.get("/api/v1/finance/reconciliation-records/summary/")
+    assert resp.status_code in {401, 403}
+
+
+@pytest.mark.django_db
+def test_reconciliation_import_requires_create_permission(api_client, institution, campus):
+    viewer = get_user_model().objects.create_user(
+        email="viewer-import@fin.test", password="Passw0rd!123", institution=institution, campus=campus
+    )
+    grant_role(viewer, institution=institution, campus=campus, role_name="Registrar/Admissions")
+    api_client.force_authenticate(viewer)
+    resp = api_client.post(
+        "/api/v1/finance/reconciliation-records/import/",
+        {"provider": "mock", "reference": "x", "amount": "1.00", "currency": "NGN"},
+        format="json",
+    )
+    assert resp.status_code in {403, 404}
