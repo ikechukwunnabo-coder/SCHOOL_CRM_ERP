@@ -9,6 +9,7 @@ from django.test import override_settings
 from rest_framework.test import APIClient
 
 from apps.academics.models import AcademicSession
+from apps.finance import services
 from apps.finance.models import (
     FeeCategory,
     FinancialAdjustment,
@@ -848,4 +849,41 @@ def test_reconciliation_reconcile_requires_update_permission(api_client, institu
     )
     api_client.force_authenticate(viewer)
     resp = api_client.post(f"/api/v1/finance/reconciliation-records/{record.id}/reconcile/")
+    assert resp.status_code in {403, 404}
+@pytest.mark.django_db
+def test_adjustment_create_denies_parent(api_client, institution, campus):
+    parent = get_user_model().objects.create_user(
+        email="parent-adj@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(parent, institution=institution, campus=campus, role_name="Parent/Guardian")
+    api_client.force_authenticate(parent)
+    resp = api_client.post(
+        "/api/v1/finance/adjustments/",
+        {"adjustment_type": "WAIVER", "amount": "1.00", "reason": "x"},
+        format="json",
+    )
+    assert resp.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_adjustment_approve_requires_permission(api_client, accountant, institution, campus):
+    viewer = get_user_model().objects.create_user(
+        email="viewer-adj@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(viewer, institution=institution, campus=campus, role_name="Registrar/Admissions")
+    adj = services.request_adjustment(
+        actor=accountant,
+        institution=institution,
+        adjustment_type=FinancialAdjustment.Type.WAIVER,
+        amount="1.00",
+        reason="x",
+    )
+    api_client.force_authenticate(viewer)
+    resp = api_client.post(f"/api/v1/finance/adjustments/{adj.id}/approve/")
     assert resp.status_code in {403, 404}
