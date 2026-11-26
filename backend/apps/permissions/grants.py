@@ -177,4 +177,8 @@ MODULE_GRANTS = {
         "approve": ADMIN_ROLES + (PRINCIPAL,),
         "export": ADMIN_ROLES + ("Bursar/Accountant", PRINCIPAL),
     },
+    "audit": {
+        "view": ADMIN_ROLES + (PRINCIPAL, VICE_PRINCIPAL, "Bursar/Accountant"),
+        "export": ADMIN_ROLES + (PRINCIPAL,),
+    },
 }
