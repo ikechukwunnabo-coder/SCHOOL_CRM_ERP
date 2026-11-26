@@ -887,3 +887,55 @@ def test_adjustment_approve_requires_permission(api_client, accountant, institut
     api_client.force_authenticate(viewer)
     resp = api_client.post(f"/api/v1/finance/adjustments/{adj.id}/approve/")
     assert resp.status_code in {403, 404}
+@pytest.mark.django_db
+def test_invoice_issue_denies_parent(api_client, institution, campus, student, accountant):
+    parent = get_user_model().objects.create_user(
+        email="parent-issue@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(parent, institution=institution, campus=campus, role_name="Parent/Guardian")
+    guardian = Guardian.objects.create(
+        institution=institution, first_name="P", last_name="I", phone="08000000003", user=parent
+    )
+    StudentGuardian.objects.create(
+        student=student,
+        guardian=guardian,
+        relationship="Parent",
+        is_primary=True,
+        portal_access=True,
+    )
+    category = FeeCategory.objects.create(institution=institution, name="TuitionI", code="TUI")
+    inv = create_invoice(
+        actor=accountant,
+        institution=institution,
+        student=student,
+        campus=campus,
+        lines=[{"description": "T", "quantity": "1", "unit_amount": "1.00", "category": category}],
+    )
+    api_client.force_authenticate(parent)
+    resp = api_client.post(f"/api/v1/finance/invoices/{inv.id}/issue/")
+    assert resp.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_adjustment_apply_requires_permission(api_client, accountant, institution, campus):
+    viewer = get_user_model().objects.create_user(
+        email="viewer-apply@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(viewer, institution=institution, campus=campus, role_name="Registrar/Admissions")
+    adj = services.request_adjustment(
+        actor=accountant,
+        institution=institution,
+        adjustment_type=FinancialAdjustment.Type.WAIVER,
+        amount="1.00",
+        reason="x",
+    )
+    adj = services.approve_adjustment(actor=accountant, adjustment=adj)
+    api_client.force_authenticate(viewer)
+    resp = api_client.post(f"/api/v1/finance/adjustments/{adj.id}/apply/")
+    assert resp.status_code in {403, 404}
