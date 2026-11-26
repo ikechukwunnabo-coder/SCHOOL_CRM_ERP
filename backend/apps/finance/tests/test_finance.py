@@ -744,3 +744,108 @@ def test_reconciliation_import_requires_create_permission(api_client, institutio
         format="json",
     )
     assert resp.status_code in {403, 404}
+@pytest.mark.django_db
+def test_finance_invoice_create_denies_parent(api_client, institution, campus, student):
+    parent = get_user_model().objects.create_user(
+        email="parent-create@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(parent, institution=institution, campus=campus, role_name="Parent/Guardian")
+    guardian = Guardian.objects.create(
+        institution=institution,
+        first_name="P",
+        last_name="X",
+        phone="08000000001",
+        user=parent,
+    )
+    StudentGuardian.objects.create(
+        student=student,
+        guardian=guardian,
+        relationship="Parent",
+        is_primary=True,
+        portal_access=True,
+    )
+    category = FeeCategory.objects.create(institution=institution, name="TuitionX", code="TUX")
+    api_client.force_authenticate(parent)
+    resp = api_client.post(
+        "/api/v1/finance/invoices/",
+        {
+            "student": str(student.id),
+            "lines": [
+                {
+                    "description": "X",
+                    "quantity": "1",
+                    "unit_amount": "1.00",
+                    "category": str(category.id),
+                }
+            ],
+        },
+        format="json",
+    )
+    assert resp.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_finance_payment_create_denies_parent(api_client, institution, campus, student):
+    parent = get_user_model().objects.create_user(
+        email="parent-pay@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(parent, institution=institution, campus=campus, role_name="Parent/Guardian")
+    guardian = Guardian.objects.create(
+        institution=institution,
+        first_name="P",
+        last_name="Y",
+        phone="08000000002",
+        user=parent,
+    )
+    StudentGuardian.objects.create(
+        student=student,
+        guardian=guardian,
+        relationship="Parent",
+        is_primary=True,
+        portal_access=True,
+    )
+    api_client.force_authenticate(parent)
+    resp = api_client.post(
+        "/api/v1/finance/payments/",
+        {"student": str(student.id), "amount": "1.00", "currency": "NGN"},
+        format="json",
+    )
+    assert resp.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_reconciliation_reconcile_requires_update_permission(api_client, institution, campus):
+    viewer = get_user_model().objects.create_user(
+        email="viewer-recon@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(viewer, institution=institution, campus=campus, role_name="Registrar/Admissions")
+    accountant = get_user_model().objects.create_user(
+        email="acct-recon@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(accountant, institution=institution, campus=campus, role_name="Bursar/Accountant")
+    from apps.finance.reconciliation import import_reconciliation_row
+
+    record, _ = import_reconciliation_row(
+        actor=accountant,
+        institution=institution,
+        provider="mock",
+        reference="rbac-recon",
+        amount="1.00",
+        currency="NGN",
+        campus=campus,
+    )
+    api_client.force_authenticate(viewer)
+    resp = api_client.post(f"/api/v1/finance/reconciliation-records/{record.id}/reconcile/")
+    assert resp.status_code in {403, 404}
