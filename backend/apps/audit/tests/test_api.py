@@ -48,3 +48,20 @@ def test_audit_log_list_allows_admin(api_client, base):
     r = api_client.get("/api/v1/audit/logs/")
     assert r.status_code == 200
     assert r.data["count"] >= 1
+
+
+@pytest.mark.django_db
+def test_audit_log_export_denies_parent(api_client, base):
+    _, _, parent = base
+    api_client.force_authenticate(parent)
+    r = api_client.get("/api/v1/audit/logs/export-csv/")
+    assert r.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_audit_log_export_allows_admin(api_client, base):
+    _, admin, _ = base
+    api_client.force_authenticate(admin)
+    r = api_client.get("/api/v1/audit/logs/export-csv/")
+    assert r.status_code == 200
+    assert r["Content-Type"].startswith("text/csv")
