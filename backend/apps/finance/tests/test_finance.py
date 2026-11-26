@@ -939,3 +939,24 @@ def test_adjustment_apply_requires_permission(api_client, accountant, institutio
     api_client.force_authenticate(viewer)
     resp = api_client.post(f"/api/v1/finance/adjustments/{adj.id}/apply/")
     assert resp.status_code in {403, 404}
+
+@pytest.mark.django_db
+def test_finance_export_denies_parent(api_client, institution, campus):
+    parent = get_user_model().objects.create_user(
+        email="parent-export@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(parent, institution=institution, campus=campus, role_name="Parent/Guardian")
+    api_client.force_authenticate(parent)
+    r = api_client.get("/api/v1/finance/dashboard/export-invoices/")
+    assert r.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_finance_export_allows_accountant(api_client, accountant):
+    api_client.force_authenticate(accountant)
+    r = api_client.get("/api/v1/finance/dashboard/export-invoices/")
+    assert r.status_code == 200
+    assert r["Content-Type"].startswith("text/csv")

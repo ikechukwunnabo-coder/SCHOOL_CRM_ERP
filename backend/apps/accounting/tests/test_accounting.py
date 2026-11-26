@@ -161,3 +161,25 @@ def test_accounting_dashboard_denies_unauthenticated():
     client = APIClient()
     response = client.get("/api/v1/accounting/dashboard/")
     assert response.status_code in {status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN}
+
+@pytest.mark.django_db
+def test_accounting_export_denies_parent(accounting_base):
+    from rest_framework.test import APIClient
+
+    _, _, _, parent, _, _ = accounting_base
+    client = APIClient()
+    client.force_authenticate(user=parent)
+    r = client.get("/api/v1/accounting/dashboard/export-journal-entries/")
+    assert r.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_accounting_export_allows_admin(accounting_base):
+    from rest_framework.test import APIClient
+
+    _, _, bursar, _, _, _ = accounting_base
+    client = APIClient()
+    client.force_authenticate(user=bursar)
+    r = client.get("/api/v1/accounting/dashboard/export-journal-entries/")
+    assert r.status_code == 200
+    assert r["Content-Type"].startswith("text/csv")

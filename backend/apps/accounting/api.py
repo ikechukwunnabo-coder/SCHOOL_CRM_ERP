@@ -1,4 +1,7 @@
+import csv
+
 from django.db.models import Count, Sum
+from django.http import HttpResponse
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -230,16 +233,23 @@ class AccountingDashboardViewSet(viewsets.ViewSet):
     permission_classes = BASE
     module = "accounting"
     verb = "view"
+    verb_map = {"export_journal_entries": "export"}
+
+    def _scoped_entries(self, request):
+        user = request.user
+        qs = JournalEntry.objects.all()
+        if not user.is_superuser:
+            qs = qs.filter(institution_id=user.institution_id)
+            if user.campus_id:
+                qs = qs.filter(campus_id=user.campus_id)
+        return qs
 
     def list(self, request):
         user = request.user
         accounts = LedgerAccount.objects.all()
-        entries = JournalEntry.objects.all()
+        entries = self._scoped_entries(request)
         if not user.is_superuser:
             accounts = accounts.filter(institution_id=user.institution_id)
-            entries = entries.filter(institution_id=user.institution_id)
-            if user.campus_id:
-                entries = entries.filter(campus_id=user.campus_id)
         posted = entries.filter(status=JournalEntry.Status.POSTED)
         posted_lines = JournalLine.objects.filter(entry__in=posted)
         return Response(
@@ -266,3 +276,25 @@ class AccountingDashboardViewSet(viewsets.ViewSet):
                 },
             }
         )
+
+    @action(detail=False, methods=["get"], url_path="export-journal-entries")
+    def export_journal_entries(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="journal-entries.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            ["id", "reference", "entry_date", "status", "description", "source_type", "source_id"]
+        )
+        for row in self._scoped_entries(request).order_by("-entry_date", "-created_at")[:5000]:
+            writer.writerow(
+                [
+                    row.id,
+                    row.reference,
+                    row.entry_date.isoformat() if row.entry_date else "",
+                    row.status,
+                    row.description,
+                    row.source_type,
+                    row.source_id,
+                ]
+            )
+        return response

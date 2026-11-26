@@ -1,4 +1,7 @@
+import csv
+
 from django.db.models import Count, Sum
+from django.http import HttpResponse
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -317,20 +320,15 @@ class FinanceDashboardViewSet(viewsets.ViewSet):
     permission_classes = BASE
     module = "finance"
     verb = "view"
+    verb_map = {"export_invoices": "export", "export_payments": "export"}
 
-    def list(self, request):
+    def _scoped_qs(self, request, model):
         user = request.user
-        invoice_qs = Invoice.objects.all()
-        payment_qs = Payment.objects.all()
-        recon_qs = ReconciliationRecord.objects.all()
+        qs = model.objects.all()
         if not user.is_superuser:
-            invoice_qs = invoice_qs.filter(institution_id=user.institution_id)
-            payment_qs = payment_qs.filter(institution_id=user.institution_id)
-            recon_qs = recon_qs.filter(institution_id=user.institution_id)
-            if user.campus_id:
-                invoice_qs = invoice_qs.filter(campus_id=user.campus_id)
-                payment_qs = payment_qs.filter(campus_id=user.campus_id)
-                recon_qs = recon_qs.filter(campus_id=user.campus_id)
+            qs = qs.filter(institution_id=user.institution_id)
+            if user.campus_id and hasattr(model, "campus_id"):
+                qs = qs.filter(campus_id=user.campus_id)
         if (not user.is_superuser) and "Parent/Guardian" in get_user_role_names(user):
             linked = StudentGuardian.objects.filter(
                 guardian__user=user,
@@ -338,9 +336,16 @@ class FinanceDashboardViewSet(viewsets.ViewSet):
                 portal_access=True,
                 student__institution_id=user.institution_id,
             ).values_list("student_id", flat=True)
-            invoice_qs = invoice_qs.filter(student_id__in=linked)
-            payment_qs = payment_qs.filter(student_id__in=linked)
-            recon_qs = recon_qs.filter(payment__student_id__in=linked)
+            if hasattr(model, "student_id"):
+                qs = qs.filter(student_id__in=linked)
+            else:
+                qs = qs.none()
+        return qs
+
+    def list(self, request):
+        invoice_qs = self._scoped_qs(request, Invoice)
+        payment_qs = self._scoped_qs(request, Payment)
+        recon_qs = self._scoped_qs(request, ReconciliationRecord)
 
         return Response(
             {
@@ -376,6 +381,72 @@ class FinanceDashboardViewSet(viewsets.ViewSet):
                 },
             }
         )
+
+    @action(detail=False, methods=["get"], url_path="export-invoices")
+    def export_invoices(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="finance-invoices.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "id",
+                "invoice_number",
+                "student_id",
+                "status",
+                "total_amount",
+                "balance_amount",
+                "currency",
+                "due_date",
+            ]
+        )
+        for row in self._scoped_qs(request, Invoice).order_by("-created_at")[:5000]:
+            writer.writerow(
+                [
+                    row.id,
+                    row.invoice_number,
+                    row.student_id,
+                    row.status,
+                    row.total_amount,
+                    row.balance_amount,
+                    row.currency,
+                    row.due_date.isoformat() if row.due_date else "",
+                ]
+            )
+        return response
+
+    @action(detail=False, methods=["get"], url_path="export-payments")
+    def export_payments(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="finance-payments.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "id",
+                "receipt_number",
+                "student_id",
+                "status",
+                "amount",
+                "currency",
+                "method",
+                "provider_ref",
+                "received_at",
+            ]
+        )
+        for row in self._scoped_qs(request, Payment).order_by("-created_at")[:5000]:
+            writer.writerow(
+                [
+                    row.id,
+                    row.receipt_number,
+                    row.student_id,
+                    row.status,
+                    row.amount,
+                    row.currency,
+                    row.method,
+                    row.provider_ref,
+                    row.received_at.isoformat() if row.received_at else "",
+                ]
+            )
+        return response
 
 
 class FinancialAdjustmentViewSet(ScopedFinanceViewSet):
