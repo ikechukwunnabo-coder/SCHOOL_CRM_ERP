@@ -5,6 +5,8 @@ import { AppShell } from "./components/AppShell";
 import { RequirePermission } from "./components/RequirePermission";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
+import { OpsDashboardsPage } from "./pages/OpsDashboardsPage";
+import { TeacherPortalPage } from "./pages/TeacherPortalPage";
 import { AcademicCalendarPage } from "./pages/m3/AcademicCalendarPage";
 import { StudentAttendancePage } from "./pages/m3/StudentAttendancePage";
 import { TeacherAttendancePage } from "./pages/m3/TeacherAttendancePage";
@@ -94,6 +96,18 @@ export default function App() {
           element={
             <RequirePermission module="transcripts">
               <TranscriptsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="operations/dashboards"
+          element={<OpsDashboardsPage />}
+        />
+        <Route
+          path="portal/teacher"
+          element={
+            <RequirePermission module="teaching">
+              <TeacherPortalPage />
             </RequirePermission>
           }
         />

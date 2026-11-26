@@ -15,6 +15,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/examinations/results", label: "Results workflow", module: "examinations" },
   { to: "/examinations/report-cards", label: "Report cards", module: "examinations" },
   { to: "/transcripts", label: "Transcripts", module: "transcripts" },
+  { to: "/operations/dashboards", label: "Ops dashboards", module: "finance" },
+  { to: "/portal/teacher", label: "Teacher portal", module: "teaching" },
 ];
 
 export function AppShell() {

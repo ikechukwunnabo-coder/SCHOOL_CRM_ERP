@@ -1,6 +1,14 @@
 import type { User } from "../auth/AuthContext";
 
-export type ModuleKey = "academics" | "teaching" | "attendance" | "examinations" | "transcripts";
+export type ModuleKey =
+  | "academics"
+  | "teaching"
+  | "attendance"
+  | "examinations"
+  | "transcripts"
+  | "finance"
+  | "accounting"
+  | "notifications";
 export type VerbKey =
   | "view"
   | "create"
@@ -21,6 +29,7 @@ const VICE_PRINCIPAL = "Vice Principal/Deputy Head";
 const CLASS_TEACHER = "Class Teacher";
 const SUBJECT_TEACHER = "Subject Teacher";
 const HR_OFFICER = "HR Officer";
+const BURSAR = "Bursar/Accountant";
 const TEACHING_VIEW = [HOD, CLASS_TEACHER, SUBJECT_TEACHER, PRINCIPAL, VICE_PRINCIPAL];
 
 const ROLE_ALIASES: Record<string, string[]> = {
@@ -69,6 +78,23 @@ const GRANTS: Record<ModuleKey, Partial<Record<VerbKey, string[]>>> = {
     print: [...ADMIN, REGISTRAR, HOD, EXAM_OFFICER, PRINCIPAL, VICE_PRINCIPAL],
     download: [...ADMIN, REGISTRAR, HOD, EXAM_OFFICER, PRINCIPAL, VICE_PRINCIPAL],
   },
+  finance: {
+    view: [...ADMIN, REGISTRAR, BURSAR, PRINCIPAL, VICE_PRINCIPAL, "Parent/Guardian"],
+    create: [...ADMIN, BURSAR],
+    update: [...ADMIN, BURSAR],
+    approve: [...ADMIN, BURSAR, PRINCIPAL],
+  },
+  accounting: {
+    view: [...ADMIN, BURSAR, PRINCIPAL, VICE_PRINCIPAL],
+    create: [...ADMIN, BURSAR],
+    update: [...ADMIN, BURSAR],
+    approve: [...ADMIN, BURSAR, PRINCIPAL],
+  },
+  notifications: {
+    view: [...ADMIN, REGISTRAR, BURSAR, PRINCIPAL, VICE_PRINCIPAL],
+    create: [...ADMIN, REGISTRAR, BURSAR],
+    update: [...ADMIN, REGISTRAR, BURSAR],
+  },
 };
 
 export function roleNames(user: User | null): string[] {
@@ -94,4 +120,4 @@ export function hasAnyRole(user: User | null, roles: string[]): boolean {
   return roles.some((role) => held.has(role));
 }
 
-export { ADMIN, CLASS_TEACHER, EXAM_OFFICER, HOD, HR_OFFICER, PRINCIPAL, REGISTRAR, SUBJECT_TEACHER, VICE_PRINCIPAL };
+export { ADMIN, BURSAR, CLASS_TEACHER, EXAM_OFFICER, HOD, HR_OFFICER, PRINCIPAL, REGISTRAR, SUBJECT_TEACHER, VICE_PRINCIPAL };
