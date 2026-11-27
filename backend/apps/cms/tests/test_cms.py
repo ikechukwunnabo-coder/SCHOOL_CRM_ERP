@@ -74,3 +74,25 @@ def test_public_cms_pages_only_published(api_client, base):
     slugs = [p["slug"] for p in r.data]
     assert "pub" in slugs
     assert "draft" not in slugs
+
+@pytest.mark.django_db
+def test_cms_page_publish_requires_permission(api_client, base):
+    inst, _, parent = base
+    page = CmsPage.objects.create(
+        institution=inst, slug="x", title="X", status=CmsPage.Status.DRAFT
+    )
+    api_client.force_authenticate(parent)
+    r = api_client.post(f"/api/v1/cms/pages/{page.id}/publish/")
+    assert r.status_code in {403, 404}
+
+
+@pytest.mark.django_db
+def test_public_cms_posts_only_published(api_client, base):
+    inst, _, _ = base
+    from apps.cms.models import CmsPost
+    CmsPost.objects.create(institution=inst, slug="d", title="D", status=CmsPost.Status.DRAFT)
+    CmsPost.objects.create(institution=inst, slug="p", title="P", status=CmsPost.Status.PUBLISHED)
+    r = api_client.get(f"/api/v1/cms/public/posts/?institution={inst.id}")
+    assert r.status_code == 200
+    slugs = [p["slug"] for p in r.data]
+    assert slugs == ["p"]
