@@ -8,6 +8,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { OpsDashboardsPage } from "./pages/OpsDashboardsPage";
 import { ReconciliationPage } from "./pages/ReconciliationPage";
 import { AuditLogsPage } from "./pages/AuditLogsPage";
+import { CmsAdminPage } from "./pages/CmsAdminPage";
+import { PublicSitePage } from "./pages/PublicSitePage";
 import { TeacherPortalPage } from "./pages/TeacherPortalPage";
 import { AcademicCalendarPage } from "./pages/m3/AcademicCalendarPage";
 import { StudentAttendancePage } from "./pages/m3/StudentAttendancePage";
@@ -29,6 +31,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/public/site" element={<PublicSitePage />} />
       <Route
         element={
           <ProtectedRoute>
@@ -118,6 +121,14 @@ export default function App() {
           element={
             <RequirePermission module="audit">
               <AuditLogsPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="cms/pages"
+          element={
+            <RequirePermission module="cms">
+              <CmsAdminPage />
             </RequirePermission>
           }
         />

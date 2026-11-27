@@ -9,7 +9,8 @@ export type ModuleKey =
   | "finance"
   | "accounting"
   | "notifications"
-  | "audit";
+  | "audit"
+  | "cms";
 export type VerbKey =
   | "view"
   | "create"
@@ -103,6 +104,12 @@ const GRANTS: Record<ModuleKey, Partial<Record<VerbKey, string[]>>> = {
   audit: {
     view: [...ADMIN, PRINCIPAL, VICE_PRINCIPAL, BURSAR],
     export: [...ADMIN, PRINCIPAL],
+  },
+  cms: {
+    view: [...ADMIN, REGISTRAR, PRINCIPAL, VICE_PRINCIPAL],
+    create: [...ADMIN, REGISTRAR],
+    update: [...ADMIN, REGISTRAR],
+    publish: [...ADMIN, PRINCIPAL],
   },
 };
 
