@@ -181,4 +181,11 @@ MODULE_GRANTS = {
         "view": ADMIN_ROLES + (PRINCIPAL, VICE_PRINCIPAL, "Bursar/Accountant"),
         "export": ADMIN_ROLES + (PRINCIPAL,),
     },
+    "cms": {
+        "view": ADMIN_ROLES + (REGISTRAR, PRINCIPAL, VICE_PRINCIPAL),
+        "create": ADMIN_ROLES + (REGISTRAR,),
+        "update": ADMIN_ROLES + (REGISTRAR,),
+        "delete_or_archive": ADMIN_ROLES,
+        "publish": ADMIN_ROLES + (PRINCIPAL,),
+    },
 }
