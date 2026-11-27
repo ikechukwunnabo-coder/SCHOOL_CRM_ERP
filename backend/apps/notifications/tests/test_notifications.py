@@ -129,3 +129,25 @@ def test_notification_send_action_denies_parent(base):
     client.force_authenticate(user=parent)
     response = client.post(f"/api/v1/notifications/logs/{n.id}/send/")
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.django_db
+def test_notification_export_denies_parent(base):
+    from rest_framework.test import APIClient
+
+    _, _, _, parent = base
+    client = APIClient()
+    client.force_authenticate(user=parent)
+    response = client.get("/api/v1/notifications/dashboard/export-logs/")
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+def test_notification_export_allows_registrar(base):
+    from rest_framework.test import APIClient
+
+    _, _, registrar, _ = base
+    client = APIClient()
+    client.force_authenticate(user=registrar)
+    response = client.get("/api/v1/notifications/dashboard/export-logs/")
+    assert response.status_code == status.HTTP_200_OK
+    assert response["Content-Type"].startswith("text/csv")

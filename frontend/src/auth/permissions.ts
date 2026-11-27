@@ -18,7 +18,8 @@ export type VerbKey =
   | "review"
   | "print"
   | "issue_or_revoke"
-  | "download";
+  | "download"
+  | "export";
 
 const ADMIN = ["Super Administrator", "Institution Administrator", "Campus Administrator"];
 const REGISTRAR = "Registrar/Admissions";
@@ -83,17 +84,20 @@ const GRANTS: Record<ModuleKey, Partial<Record<VerbKey, string[]>>> = {
     create: [...ADMIN, BURSAR],
     update: [...ADMIN, BURSAR],
     approve: [...ADMIN, BURSAR, PRINCIPAL],
+    export: [...ADMIN, BURSAR, PRINCIPAL],
   },
   accounting: {
     view: [...ADMIN, BURSAR, PRINCIPAL, VICE_PRINCIPAL],
     create: [...ADMIN, BURSAR],
     update: [...ADMIN, BURSAR],
     approve: [...ADMIN, BURSAR, PRINCIPAL],
+    export: [...ADMIN, BURSAR, PRINCIPAL],
   },
   notifications: {
     view: [...ADMIN, REGISTRAR, BURSAR, PRINCIPAL, VICE_PRINCIPAL],
     create: [...ADMIN, REGISTRAR, BURSAR],
     update: [...ADMIN, REGISTRAR, BURSAR],
+    export: [...ADMIN, REGISTRAR, BURSAR, PRINCIPAL],
   },
 };
 

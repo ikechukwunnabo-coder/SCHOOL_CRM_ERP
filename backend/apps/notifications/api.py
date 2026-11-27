@@ -1,4 +1,7 @@
+import csv
+
 from django.db.models import Count
+from django.http import HttpResponse
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -109,14 +112,19 @@ class NotificationDashboardViewSet(viewsets.ViewSet):
     permission_classes = BASE
     module = "notifications"
     verb = "view"
+    verb_map = {"export_logs": "export"}
 
-    def list(self, request):
+    def _scoped_qs(self, request):
         user = request.user
         qs = Notification.objects.all()
         if not user.is_superuser:
             qs = qs.filter(institution_id=user.institution_id)
             if getattr(user, "campus_id", None):
                 qs = qs.filter(campus_id=user.campus_id) | qs.filter(campus__isnull=True)
+        return qs
+
+    def list(self, request):
+        qs = self._scoped_qs(request)
         return Response(
             {
                 "count": qs.count(),
@@ -130,3 +138,33 @@ class NotificationDashboardViewSet(viewsets.ViewSet):
                 },
             }
         )
+
+    @action(detail=False, methods=["get"], url_path="export-logs")
+    def export_logs(self, request):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="notification-logs.csv"'
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "id",
+                "created_at",
+                "channel",
+                "status",
+                "recipient_email",
+                "recipient_phone",
+                "subject",
+            ]
+        )
+        for row in self._scoped_qs(request).order_by("-created_at")[:5000]:
+            writer.writerow(
+                [
+                    row.id,
+                    row.created_at.isoformat() if row.created_at else "",
+                    row.channel,
+                    row.status,
+                    row.recipient_email,
+                    row.recipient_phone,
+                    row.subject,
+                ]
+            )
+        return response
