@@ -6,6 +6,7 @@ import { RequirePermission } from "./components/RequirePermission";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OpsDashboardsPage } from "./pages/OpsDashboardsPage";
+import { ReconciliationPage } from "./pages/ReconciliationPage";
 import { TeacherPortalPage } from "./pages/TeacherPortalPage";
 import { AcademicCalendarPage } from "./pages/m3/AcademicCalendarPage";
 import { StudentAttendancePage } from "./pages/m3/StudentAttendancePage";
@@ -102,6 +103,14 @@ export default function App() {
         <Route
           path="operations/dashboards"
           element={<OpsDashboardsPage />}
+        />
+        <Route
+          path="operations/reconciliation"
+          element={
+            <RequirePermission module="finance">
+              <ReconciliationPage />
+            </RequirePermission>
+          }
         />
         <Route
           path="portal/teacher"
