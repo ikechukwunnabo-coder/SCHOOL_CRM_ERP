@@ -960,3 +960,23 @@ def test_finance_export_allows_accountant(api_client, accountant):
     r = api_client.get("/api/v1/finance/dashboard/export-invoices/")
     assert r.status_code == 200
     assert r["Content-Type"].startswith("text/csv")
+
+@pytest.mark.django_db
+def test_reconciliation_list_scopes_parent(api_client, institution, campus):
+    parent = get_user_model().objects.create_user(
+        email="parent-recon-list@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(parent, institution=institution, campus=campus, role_name="Parent/Guardian")
+    api_client.force_authenticate(parent)
+    r = api_client.get("/api/v1/finance/reconciliation-records/")
+    assert r.status_code == 200
+    assert r.data["count"] == 0
+
+@pytest.mark.django_db
+def test_reconciliation_list_allows_accountant(api_client, accountant):
+    api_client.force_authenticate(accountant)
+    r = api_client.get("/api/v1/finance/reconciliation-records/")
+    assert r.status_code == 200

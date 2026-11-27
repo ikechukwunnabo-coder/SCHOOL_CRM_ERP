@@ -17,6 +17,7 @@ const LINKS = [
   { to: "/transcripts", label: "Transcripts", module: "transcripts" },
   { to: "/operations/dashboards", label: "Ops dashboards", module: "finance" },
   { to: "/operations/reconciliation", label: "Reconciliation", module: "finance" },
+  { to: "/operations/audit-logs", label: "Audit logs", module: "audit" },
   { to: "/portal/teacher", label: "Teacher portal", module: "teaching" },
 ] as const;
 
