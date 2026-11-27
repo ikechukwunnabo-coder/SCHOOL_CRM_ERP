@@ -980,3 +980,16 @@ def test_reconciliation_list_allows_accountant(api_client, accountant):
     api_client.force_authenticate(accountant)
     r = api_client.get("/api/v1/finance/reconciliation-records/")
     assert r.status_code == 200
+
+@pytest.mark.django_db
+def test_finance_payment_export_denies_parent(api_client, institution, campus):
+    parent = get_user_model().objects.create_user(
+        email="parent-pay-export@fin.test",
+        password="Passw0rd!123",
+        institution=institution,
+        campus=campus,
+    )
+    grant_role(parent, institution=institution, campus=campus, role_name="Parent/Guardian")
+    api_client.force_authenticate(parent)
+    r = api_client.get("/api/v1/finance/dashboard/export-payments/")
+    assert r.status_code in {403, 404}

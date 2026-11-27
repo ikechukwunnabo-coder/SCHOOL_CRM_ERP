@@ -65,3 +65,12 @@ def test_audit_log_export_allows_admin(api_client, base):
     r = api_client.get("/api/v1/audit/logs/export-csv/")
     assert r.status_code == 200
     assert r["Content-Type"].startswith("text/csv")
+
+@pytest.mark.django_db
+def test_audit_log_retrieve_denies_parent(api_client, base):
+    inst, _, parent = base
+    from apps.audit.models import AuditLog
+    log = AuditLog.objects.filter(institution_id=inst.id).first()
+    api_client.force_authenticate(parent)
+    r = api_client.get(f"/api/v1/audit/logs/{log.id}/")
+    assert r.status_code in {403, 404}
