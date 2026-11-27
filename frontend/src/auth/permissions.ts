@@ -8,7 +8,8 @@ export type ModuleKey =
   | "transcripts"
   | "finance"
   | "accounting"
-  | "notifications";
+  | "notifications"
+  | "audit";
 export type VerbKey =
   | "view"
   | "create"
@@ -98,6 +99,10 @@ const GRANTS: Record<ModuleKey, Partial<Record<VerbKey, string[]>>> = {
     create: [...ADMIN, REGISTRAR, BURSAR],
     update: [...ADMIN, REGISTRAR, BURSAR],
     export: [...ADMIN, REGISTRAR, BURSAR, PRINCIPAL],
+  },
+  audit: {
+    view: [...ADMIN, PRINCIPAL, VICE_PRINCIPAL, BURSAR],
+    export: [...ADMIN, PRINCIPAL],
   },
 };
 

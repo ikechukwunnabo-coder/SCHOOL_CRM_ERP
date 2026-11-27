@@ -7,6 +7,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OpsDashboardsPage } from "./pages/OpsDashboardsPage";
 import { ReconciliationPage } from "./pages/ReconciliationPage";
+import { AuditLogsPage } from "./pages/AuditLogsPage";
 import { TeacherPortalPage } from "./pages/TeacherPortalPage";
 import { AcademicCalendarPage } from "./pages/m3/AcademicCalendarPage";
 import { StudentAttendancePage } from "./pages/m3/StudentAttendancePage";
@@ -109,6 +110,14 @@ export default function App() {
           element={
             <RequirePermission module="finance">
               <ReconciliationPage />
+            </RequirePermission>
+          }
+        />
+        <Route
+          path="operations/audit-logs"
+          element={
+            <RequirePermission module="audit">
+              <AuditLogsPage />
             </RequirePermission>
           }
         />
